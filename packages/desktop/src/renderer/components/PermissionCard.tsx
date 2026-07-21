@@ -1,0 +1,113 @@
+import { useMemo, useState, type JSX } from "react";
+import type { AskPermissionRequest, PermissionScope } from "../../shared/ipc";
+import {
+  buildResult,
+  buildScopePrompts,
+  isAlwaysAllowedScope,
+  scopeRiskColor,
+  type PermissionResult,
+} from "../lib/permissions";
+import { useI18n, type MessageKey } from "../i18n";
+
+type Props = {
+  requests: AskPermissionRequest[];
+  onSubmit: (result: PermissionResult) => void;
+  onCancel: () => void;
+};
+
+/**
+ * Walks through each requested scope, letting the user allow / always-allow / deny.
+ * Emits the aggregated PermissionResult once every prompt has been answered.
+ */
+export function PermissionCard({ requests, onSubmit, onCancel }: Props): JSX.Element | null {
+  const { t } = useI18n();
+  const prompts = useMemo(() => buildScopePrompts(requests), [requests]);
+  const [index, setIndex] = useState(0);
+  const [decisions, setDecisions] = useState<Record<string, "allow" | "deny">>({});
+  const [alwaysAllows, setAlwaysAllows] = useState<PermissionScope[]>([]);
+
+  // Skip scopes already granted "always" during this run.
+  let effectiveIndex = index;
+  while (effectiveIndex < prompts.length) {
+    const scope = prompts[effectiveIndex]!.scope;
+    if (isAlwaysAllowedScope(scope) && alwaysAllows.includes(scope)) {
+      effectiveIndex += 1;
+      continue;
+    }
+    break;
+  }
+
+  const prompt = prompts[effectiveIndex] ?? null;
+  if (!prompt) {
+    return null;
+  }
+
+  function commit(kind: "allow" | "always" | "deny"): void {
+    const current = prompt!;
+    const nextDecisions = { ...decisions };
+    const prev = nextDecisions[current.request.toolCallId];
+    nextDecisions[current.request.toolCallId] = kind === "deny" ? "deny" : prev === "deny" ? "deny" : "allow";
+
+    let nextAlways = alwaysAllows;
+    if (kind === "always" && isAlwaysAllowedScope(current.scope)) {
+      nextAlways = alwaysAllows.includes(current.scope) ? alwaysAllows : [...alwaysAllows, current.scope];
+    }
+
+    const nextIndex = effectiveIndex + 1;
+    setDecisions(nextDecisions);
+    setAlwaysAllows(nextAlways);
+    setIndex(nextIndex);
+
+    // Determine if any prompts remain after this decision.
+    let remaining = nextIndex;
+    while (remaining < prompts.length) {
+      const scope = prompts[remaining]!.scope;
+      if (isAlwaysAllowedScope(scope) && nextAlways.includes(scope)) {
+        remaining += 1;
+        continue;
+      }
+      break;
+    }
+    if (remaining >= prompts.length) {
+      onSubmit(buildResult(requests, nextDecisions, nextAlways));
+    }
+  }
+
+  const allowAlways = isAlwaysAllowedScope(prompt.scope);
+
+  return (
+    <div className="card warn">
+      <div className="card-title">
+        {t("perm.required")}{" "}
+        <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>
+          {Math.min(effectiveIndex + 1, prompts.length)}/{prompts.length}
+        </span>
+      </div>
+      <div style={{ fontWeight: 600 }}>{prompt.request.name}</div>
+      <div className="mono">{prompt.request.command}</div>
+      {prompt.request.description ? (
+        <div style={{ color: "var(--text-dim)", fontSize: 12.5 }}>{prompt.request.description}</div>
+      ) : null}
+      <div style={{ marginTop: 8 }}>{t("perm.proceed")}</div>
+      <div className="opt-row">
+        <button className="opt" onClick={() => commit("allow")}>
+          {t("perm.yes")}
+        </button>
+        {allowAlways ? (
+          <button className="opt" onClick={() => commit("always")}>
+            {t("perm.always")}
+            <span className="scope-tag" style={{ color: scopeRiskColor(prompt.scope) }}>
+              {t(`scope.${prompt.scope}` as MessageKey)}
+            </span>
+          </button>
+        ) : null}
+        <button className="opt" onClick={() => commit("deny")}>
+          {t("perm.no")}
+        </button>
+      </div>
+      <div className="card-actions">
+        <button onClick={onCancel}>{t("common.interrupt")}</button>
+      </div>
+    </div>
+  );
+}

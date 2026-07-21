@@ -57,7 +57,7 @@ export default tseslint.config(
   },
   // Script files: Node.js environment
   {
-    files: ["./scripts/**/*.js", "./scripts/**/*.mjs", "packages/*/scripts/**/*.js"],
+    files: ["./scripts/**/*.js", "./scripts/**/*.mjs", "packages/*/scripts/**/*.js", "packages/*/build.mjs"],
     languageOptions: {
       globals: {
         process: "readonly",

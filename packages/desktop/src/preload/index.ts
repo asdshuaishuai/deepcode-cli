@@ -1,0 +1,56 @@
+// Preload: exposes a typed, minimal API surface on `window.deepcode`.
+// Runs with contextIsolation so the renderer never touches Node/Electron directly.
+
+import { contextBridge, ipcRenderer } from "electron";
+import { IpcEvent, IpcRequest } from "../shared/ipc";
+import type { DesktopApi } from "../shared/ipc";
+
+function subscribe(channel: string, cb: (payload: never) => void): () => void {
+  const listener = (_event: unknown, payload: unknown): void => cb(payload as never);
+  ipcRenderer.on(channel, listener as never);
+  return () => ipcRenderer.removeListener(channel, listener as never);
+}
+
+const api: DesktopApi = {
+  ready: () => ipcRenderer.invoke(IpcRequest.Ready),
+  pickFolder: () => ipcRenderer.invoke(IpcRequest.PickFolder),
+  setProjectRoot: (root) => ipcRenderer.invoke(IpcRequest.SetProjectRoot, root),
+  getProjectRoot: () => ipcRenderer.invoke(IpcRequest.GetProjectRoot),
+
+  minimizeWindow: () => ipcRenderer.invoke(IpcRequest.WindowMinimize),
+  toggleMaximizeWindow: () => ipcRenderer.invoke(IpcRequest.WindowToggleMaximize),
+  closeWindow: () => ipcRenderer.invoke(IpcRequest.WindowClose),
+
+  listSessions: () => ipcRenderer.invoke(IpcRequest.SessionList),
+  getSession: (id) => ipcRenderer.invoke(IpcRequest.SessionGet, id),
+  listMessages: (id) => ipcRenderer.invoke(IpcRequest.SessionMessages, id),
+  setActiveSession: (id) => ipcRenderer.invoke(IpcRequest.SessionSetActive, id),
+  getActiveSession: () => ipcRenderer.invoke(IpcRequest.SessionGetActive),
+  deleteSession: (id) => ipcRenderer.invoke(IpcRequest.SessionDelete, id),
+  renameSession: (id, summary) => ipcRenderer.invoke(IpcRequest.SessionRename, id, summary),
+
+  sendPrompt: (prompt) => ipcRenderer.invoke(IpcRequest.PromptSend, prompt),
+  interrupt: () => ipcRenderer.invoke(IpcRequest.PromptInterrupt),
+  denyPermission: (reason) => ipcRenderer.invoke(IpcRequest.PermissionDeny, reason),
+
+  listSkills: (sessionId) => ipcRenderer.invoke(IpcRequest.SkillsList, sessionId),
+  getSettings: () => ipcRenderer.invoke(IpcRequest.SettingsGet),
+  getEditableSettings: () => ipcRenderer.invoke(IpcRequest.SettingsGetEditable),
+  updateSettings: (patch) => ipcRenderer.invoke(IpcRequest.SettingsUpdate, patch),
+  setModel: (selection) => ipcRenderer.invoke(IpcRequest.ModelSet, selection),
+
+  mcpStatus: () => ipcRenderer.invoke(IpcRequest.McpStatus),
+  mcpReconnect: (name) => ipcRenderer.invoke(IpcRequest.McpReconnect, name),
+
+  listUndoTargets: (sessionId) => ipcRenderer.invoke(IpcRequest.UndoList, sessionId),
+  restoreUndo: (sessionId, messageId, mode) => ipcRenderer.invoke(IpcRequest.UndoRestore, sessionId, messageId, mode),
+
+  onAssistantMessage: (cb) => subscribe(IpcEvent.AssistantMessage, cb as (p: never) => void),
+  onSessionEntryUpdated: (cb) => subscribe(IpcEvent.SessionEntryUpdated, cb as (p: never) => void),
+  onLlmStreamProgress: (cb) => subscribe(IpcEvent.LlmStreamProgress, cb as (p: never) => void),
+  onMcpStatusChanged: (cb) => subscribe(IpcEvent.McpStatusChanged, cb as (p: never) => void),
+  onProcessStdout: (cb) => subscribe(IpcEvent.ProcessStdout, cb as (p: never) => void),
+  onProjectRootChanged: (cb) => subscribe(IpcEvent.ProjectRootChanged, cb as (p: never) => void),
+};
+
+contextBridge.exposeInMainWorld("deepcode", api);

@@ -16,6 +16,7 @@ out/
 *.log
 *.vsix
 .deepcode/settings.json
+.qoder/
 
 # TypeScript build info files
 *.tsbuildinfo
