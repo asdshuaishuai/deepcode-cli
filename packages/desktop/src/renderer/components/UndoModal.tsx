@@ -2,6 +2,7 @@ import { useEffect, useState, type JSX } from "react";
 import type { UndoTarget } from "../../shared/ipc";
 import { api } from "../api";
 import { useI18n } from "../i18n";
+import { Button, Modal } from "../ui/index";
 
 type Props = {
   sessionId: string | null;
@@ -62,45 +63,49 @@ export function UndoModal({ sessionId, onClose, onRestored }: Props): JSX.Elemen
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal undo-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t("undo.title")}</h2>
-        <div className="modal-sub">{t("undo.subtitle")}</div>
-        {error ? <div className="undo-error">{error}</div> : null}
-        <div className="undo-list">
-          {!sessionId ? (
-            <div className="undo-empty">{t("undo.needSession")}</div>
-          ) : loading ? (
-            <div className="undo-empty">…</div>
-          ) : targets.length === 0 ? (
-            <div className="undo-empty">{t("undo.none")}</div>
-          ) : (
-            targets.map((target) => (
-              <div className="undo-item" key={target.message.id}>
-                <div className="undo-preview">
-                  <span className="undo-index">#{target.index + 1}</span> {preview(target)}
-                </div>
-                {target.canRestoreCode ? <div className="undo-label">{t("undo.codeAvailable")}</div> : null}
-                <div className="undo-mode">
-                  <button disabled={busyId !== null} onClick={() => void restore(target, "conversation")}>
-                    {t("undo.restoreConversation")}
-                  </button>
-                  {target.canRestoreCode ? (
-                    <button disabled={busyId !== null} onClick={() => void restore(target, "code-and-conversation")}>
-                      {t("undo.restoreBoth")}
-                    </button>
-                  ) : null}
-                </div>
+    <Modal
+      onClose={onClose}
+      title={t("undo.title")}
+      subtitle={t("undo.subtitle")}
+      actions={
+        <Button size="sm" onClick={onClose}>
+          {t("common.close")}
+        </Button>
+      }
+    >
+      {error ? <div className="ui-undo-error">{error}</div> : null}
+      <div className="ui-undo-list">
+        {!sessionId ? (
+          <div className="ui-undo-empty">{t("undo.needSession")}</div>
+        ) : loading ? (
+          <div className="ui-undo-empty">…</div>
+        ) : targets.length === 0 ? (
+          <div className="ui-undo-empty">{t("undo.none")}</div>
+        ) : (
+          targets.map((target) => (
+            <div className="ui-undo-item" key={target.message.id}>
+              <div className="ui-undo-preview">
+                <span className="ui-undo-index">#{target.index + 1}</span> {preview(target)}
               </div>
-            ))
-          )}
-        </div>
-        <div className="modal-actions">
-          <button className="ghost" onClick={onClose}>
-            {t("common.close")}
-          </button>
-        </div>
+              {target.canRestoreCode ? <div className="ui-undo-label">{t("undo.codeAvailable")}</div> : null}
+              <div className="ui-undo-mode">
+                <Button size="sm" disabled={busyId !== null} onClick={() => void restore(target, "conversation")}>
+                  {t("undo.restoreConversation")}
+                </Button>
+                {target.canRestoreCode ? (
+                  <Button
+                    size="sm"
+                    disabled={busyId !== null}
+                    onClick={() => void restore(target, "code-and-conversation")}
+                  >
+                    {t("undo.restoreBoth")}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ))
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

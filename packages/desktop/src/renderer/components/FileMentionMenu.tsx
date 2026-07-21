@@ -62,26 +62,26 @@ export function FileMentionMenu({ open, query, onSelect, onClose, anchorRect }: 
 
   return (
     <div
-      className="file-mention-menu"
+      className="ui-file-mention-menu"
       style={anchorRect ? { maxHeight: Math.min(240, window.innerHeight - anchorRect.bottom - 20) } : undefined}
     >
       {loading ? (
-        <div className="file-mention-loading">Scanning…</div>
+        <div className="ui-file-mention-loading">Scanning…</div>
       ) : items.length === 0 ? (
-        <div className="file-mention-empty">{query ? "No matching files" : "Type to search files…"}</div>
+        <div className="ui-file-mention-empty">{query ? "No matching files" : "Type to search files…"}</div>
       ) : (
         items.map((item, i) => (
           <button
             key={item.path}
-            className={`file-mention-option${i === activeIndex ? " active" : ""}`}
+            className={`ui-file-mention-option${i === activeIndex ? " active" : ""}`}
             onMouseDown={(e) => {
               e.preventDefault();
               handleSelect(item);
             }}
             onMouseEnter={() => setActiveIndex(i)}
           >
-            <span className="file-mention-icon">{item.type === "directory" ? "📁" : "📄"}</span>
-            <span className="file-mention-path">{item.path}</span>
+            <span className="ui-file-mention-icon">{item.type === "directory" ? "📁" : "📄"}</span>
+            <span className="ui-file-mention-path">{item.path}</span>
           </button>
         ))
       )}

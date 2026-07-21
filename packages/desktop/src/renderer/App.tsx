@@ -39,6 +39,7 @@ import {
   type ReasoningMode,
 } from "./lib/appearance";
 import { useI18n } from "./i18n";
+import { CommandPalette, Rail, RailBrand, RailButton, RailSpacer, type CommandItem } from "./ui/index";
 
 type PendingPermissionReply = {
   sessionId: string;
@@ -92,6 +93,9 @@ export function App(): JSX.Element {
 
   const [appearance, setAppearanceState] = useState<Appearance>("light");
   const [reasoningMode, setReasoningModeState] = useState<ReasoningMode>(() => getStoredReasoningMode());
+
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const activeIdRef = useRef<string | null>(null);
   activeIdRef.current = activeId;
@@ -400,6 +404,47 @@ export function App(): JSX.Element {
     [refreshSessions]
   );
 
+  // ── ⌘K command palette ───────────────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const commandItems = useMemo<CommandItem[]>(
+    () => [
+      { id: "new", label: t("command.new.label"), keywords: "new session", run: handleNewSession },
+      { id: "plan", label: t("command.plan.label"), keywords: "plan", run: () => setPlanMode((v) => !v) },
+      { id: "model", label: t("command.model.label"), keywords: "model", run: () => setModal("model") },
+      {
+        id: "plugins",
+        label: t("command.plugins.label"),
+        keywords: "plugins mcp skills",
+        run: () => setModal("plugins"),
+      },
+      {
+        id: "settings",
+        label: t("command.settings.label"),
+        keywords: "settings config",
+        run: () => void handleOpenSettings(),
+      },
+      { id: "undo", label: t("command.undo.label"), keywords: "undo restore", run: () => setModal("undo") },
+      {
+        id: "init",
+        label: t("command.init.label"),
+        keywords: "init agents",
+        run: () => void runPrompt({ text: "/init" }),
+      },
+      { id: "raw", label: t("command.raw.label"), keywords: "reasoning raw", run: handleCycleReasoning },
+    ],
+    [handleCycleReasoning, handleNewSession, handleOpenSettings, runPrompt, t]
+  );
+
   // ── Derived UI ────────────────────────────────────────────────────────────────
   const pendingQuestion = useMemo(() => {
     const found = findPendingAskUserQuestion(messages, activeStatus);
@@ -429,33 +474,74 @@ export function App(): JSX.Element {
 
   const composerDisabled = showQuestion || showPermission || showPlan;
 
+  const reasoningIcon = reasoningMode === "hidden" ? "◌" : reasoningMode === "expanded" ? "◉" : "◎";
+  const reasoningTitle =
+    reasoningMode === "hidden"
+      ? t("topbar.reasoningHidden")
+      : reasoningMode === "expanded"
+        ? t("topbar.reasoningExpanded")
+        : t("topbar.reasoningNormal");
+  const appearanceTitle = appearance === "dark" ? t("topbar.appearanceDark") : t("topbar.appearanceLight");
+
   return (
-    <div className="app">
-      <TopBar
-        platform={platform}
-        projectRoot={projectRoot}
-        settings={settings}
-        mcpCount={mcpStatuses.length}
-        skillCount={skills.length}
-        appearance={appearance}
-        reasoningMode={reasoningMode}
-        onPickFolder={() => void handlePickFolder()}
-        onOpenModel={() => setModal("model")}
-        onOpenPlugins={() => setModal("plugins")}
-        onOpenSettings={() => void handleOpenSettings()}
-        onToggleAppearance={handleToggleAppearance}
-        onCycleReasoning={handleCycleReasoning}
-        onOpenUndo={() => setModal("undo")}
-      />
+    <div className={`ui-shell${panelOpen ? " panel-open" : ""}`}>
+      <Rail>
+        <RailBrand>DC</RailBrand>
+        <RailButton title={t("rail.newSession")} aria-label={t("rail.newSession")} onClick={handleNewSession}>
+          ✎
+        </RailButton>
+        <RailButton
+          active={panelOpen}
+          title={t("rail.sessions")}
+          aria-label={t("rail.sessions")}
+          onClick={() => setPanelOpen((v) => !v)}
+        >
+          ☰
+        </RailButton>
+        <RailButton title={t("rail.commands")} aria-label={t("rail.commands")} onClick={() => setPaletteOpen(true)}>
+          ⌘
+        </RailButton>
+        <RailButton title={t("rail.plugins")} aria-label={t("rail.plugins")} onClick={() => setModal("plugins")}>
+          🧩
+        </RailButton>
+        <RailSpacer />
+        <RailButton title={reasoningTitle} aria-label={reasoningTitle} onClick={handleCycleReasoning}>
+          {reasoningIcon}
+        </RailButton>
+        <RailButton title={appearanceTitle} aria-label={appearanceTitle} onClick={handleToggleAppearance}>
+          {appearance === "dark" ? "☾" : "☀"}
+        </RailButton>
+        <RailButton title={t("rail.undo")} aria-label={t("rail.undo")} onClick={() => setModal("undo")}>
+          ↺
+        </RailButton>
+        <RailButton
+          title={t("rail.settings")}
+          aria-label={t("rail.settings")}
+          onClick={() => void handleOpenSettings()}
+        >
+          ⚙
+        </RailButton>
+      </Rail>
+
       <Sidebar
         sessions={sessions}
         activeId={activeId}
         onSelect={(id) => void loadSession(id)}
-        onNew={handleNewSession}
         onDelete={(id) => void handleDeleteSession(id)}
         onRename={(id, summary) => void handleRenameSession(id, summary)}
+        onCollapse={() => setPanelOpen(false)}
       />
-      <div className="main">
+
+      <TopBar
+        platform={platform}
+        projectRoot={projectRoot}
+        settings={settings}
+        onPickFolder={() => void handlePickFolder()}
+        onOpenModel={() => setModal("model")}
+        onOpenSettings={() => void handleOpenSettings()}
+      />
+
+      <div className="ui-main">
         <MessageList
           messages={messages}
           hasActiveSession={activeId !== null || messages.length > 0}
@@ -473,48 +559,50 @@ export function App(): JSX.Element {
           }}
           footer={footer}
         />
-        <Composer
-          value={draft}
-          onChange={setDraft}
-          onSend={handleSend}
-          onStop={handleStop}
-          busy={busy}
-          disabled={composerDisabled}
-          planMode={planMode}
-          onTogglePlan={() => setPlanMode((v) => !v)}
-          skills={skills}
-          selectedSkills={selectedSkills}
-          onToggleSkill={(name) =>
-            setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
-          }
-          statusText={statusLine}
-          errorText={errorLine}
-          imageUrls={imageUrls}
-          onRemoveImage={(i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
-          onSlashCommand={(cmd) => {
-            if (cmd === "new") {
-              handleNewSession();
-            } else if (cmd === "plan") {
-              setPlanMode((v) => !v);
-            } else if (cmd === "model") {
-              setModal("model");
-            } else if (cmd === "mcp" || cmd === "plugins") {
-              setModal("plugins");
-            } else if (cmd === "skills") {
-              // Skills are shown as chips already, nothing extra needed
-            } else if (cmd === "settings") {
-              void handleOpenSettings();
-            } else if (cmd === "undo") {
-              setModal("undo");
-            } else if (cmd === "init") {
-              void runPrompt({ text: "/init" });
-            } else if (cmd === "raw") {
-              handleCycleReasoning();
-            } else if (cmd === "continue") {
-              handleSend();
+        <div className="ui-composer-dock">
+          <Composer
+            value={draft}
+            onChange={setDraft}
+            onSend={handleSend}
+            onStop={handleStop}
+            busy={busy}
+            disabled={composerDisabled}
+            planMode={planMode}
+            onTogglePlan={() => setPlanMode((v) => !v)}
+            skills={skills}
+            selectedSkills={selectedSkills}
+            onToggleSkill={(name) =>
+              setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
             }
-          }}
-        />
+            statusText={statusLine}
+            errorText={errorLine}
+            imageUrls={imageUrls}
+            onRemoveImage={(i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+            onSlashCommand={(cmd) => {
+              if (cmd === "new") {
+                handleNewSession();
+              } else if (cmd === "plan") {
+                setPlanMode((v) => !v);
+              } else if (cmd === "model") {
+                setModal("model");
+              } else if (cmd === "mcp" || cmd === "plugins") {
+                setModal("plugins");
+              } else if (cmd === "skills") {
+                // Skills are shown as chips already, nothing extra needed
+              } else if (cmd === "settings") {
+                void handleOpenSettings();
+              } else if (cmd === "undo") {
+                setModal("undo");
+              } else if (cmd === "init") {
+                void runPrompt({ text: "/init" });
+              } else if (cmd === "raw") {
+                handleCycleReasoning();
+              } else if (cmd === "continue") {
+                handleSend();
+              }
+            }}
+          />
+        </div>
       </div>
 
       {modal === "model" && settings ? (
@@ -542,6 +630,14 @@ export function App(): JSX.Element {
       {modal === "undo" ? (
         <UndoModal sessionId={activeId} onClose={() => setModal(null)} onRestored={() => void handleUndoRestored()} />
       ) : null}
+
+      <CommandPalette
+        open={paletteOpen}
+        items={commandItems}
+        placeholder={t("command.placeholder")}
+        emptyLabel={t("command.empty")}
+        onClose={() => setPaletteOpen(false)}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import type { AskUserQuestionAnswers, AskUserQuestionItem } from "../lib/ask-question";
 import { useI18n } from "../i18n";
+import { Button, Card, CardHeader, Row } from "../ui/index";
 
 type Props = {
   questions: AskUserQuestionItem[];
@@ -49,39 +50,41 @@ export function QuestionCard({ questions, onSubmit, onCancel }: Props): JSX.Elem
   }
 
   return (
-    <div className="card">
-      <div className="card-title">{t("question.title")}</div>
+    <Card>
+      <CardHeader>{t("question.title")}</CardHeader>
       {questions.map((q, qIndex) => (
-        <div key={qIndex} className="q-block">
-          <div className="q-text">
+        <div key={qIndex} className="ui-q-block">
+          <div className="ui-q-text">
             {q.question}
             {q.multiSelect ? (
-              <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>{t("question.selectAny")}</span>
+              <span style={{ color: "var(--ui-text-faint)", fontWeight: 400 }}>{t("question.selectAny")}</span>
             ) : null}
           </div>
-          <div className="opt-row">
+          <div className="ui-opt-row">
             {q.options.map((opt) => {
               const selected = selections[qIndex]?.has(opt.label) ?? false;
               return (
                 <button
                   key={opt.label}
-                  className={`opt${selected ? " selected" : ""}`}
+                  className={`ui-opt${selected ? " selected" : ""}`}
                   onClick={() => toggle(qIndex, opt.label, q.multiSelect === true)}
                 >
                   {opt.label}
-                  {opt.description ? <span className="opt-desc">{opt.description}</span> : null}
+                  {opt.description ? <span className="ui-opt-desc">{opt.description}</span> : null}
                 </button>
               );
             })}
           </div>
         </div>
       ))}
-      <div className="card-actions">
-        <button className="primary" onClick={submit} disabled={!answered}>
+      <Row justify="flex-end">
+        <Button variant="primary" size="sm" onClick={submit} disabled={!answered}>
           {t("common.submit")}
-        </button>
-        <button onClick={onCancel}>{t("common.skip")}</button>
-      </div>
-    </div>
+        </Button>
+        <Button size="sm" onClick={onCancel}>
+          {t("common.skip")}
+        </Button>
+      </Row>
+    </Card>
   );
 }

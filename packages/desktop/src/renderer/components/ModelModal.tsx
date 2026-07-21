@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import type { ModelConfigSelection, ReasoningEffort, SettingsSummary } from "../../shared/ipc";
 import { useI18n, type MessageKey } from "../i18n";
+import { Button, Field, Input, Modal, Select } from "../ui/index";
 
 type Props = {
   settings: SettingsSummary;
@@ -43,69 +44,68 @@ export function ModelModal({ settings, onApply, onClose }: Props): JSX.Element {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t("model.title")}</h2>
-
-        <div className="field">
-          <label>{t("model.model")}</label>
-          <select
-            value={useCustom ? "__custom__" : model}
-            onChange={(e) => {
-              if (e.target.value === "__custom__") {
-                setUseCustom(true);
-              } else {
-                setUseCustom(false);
-                setModel(e.target.value);
-              }
-            }}
-          >
-            {MODELS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-            <option value="__custom__">{t("model.custom")}</option>
-          </select>
-        </div>
-
-        {useCustom ? (
-          <div className="field">
-            <label>{t("model.customName")}</label>
-            <input
-              type="text"
-              value={customModel}
-              placeholder="e.g. gpt-4o-mini"
-              onChange={(e) => setCustomModel(e.target.value)}
-            />
-          </div>
-        ) : null}
-
-        <div className="field">
-          <label>{t("model.thinking")}</label>
-          <select value={thinkingIndex} onChange={(e) => setThinkingIndex(Number(e.target.value))}>
-            {THINKING_OPTIONS.map((o, i) => (
-              <option key={o.labelKey} value={i}>
-                {t(o.labelKey)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field" style={{ color: "var(--text-faint)", fontSize: 12 }}>
-          {t("model.baseUrlKey", {
-            url: settings.baseURL,
-            status: settings.hasApiKey ? t("model.configured") : t("model.missing"),
-          })}
-        </div>
-
-        <div className="card-actions">
-          <button className="primary" onClick={apply}>
+    <Modal
+      onClose={onClose}
+      title={t("model.title")}
+      actions={
+        <>
+          <Button variant="primary" size="sm" onClick={apply}>
             {t("common.apply")}
-          </button>
-          <button onClick={onClose}>{t("common.cancel")}</button>
-        </div>
+          </Button>
+          <Button size="sm" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+        </>
+      }
+    >
+      <Field label={t("model.model")}>
+        <Select
+          value={useCustom ? "__custom__" : model}
+          onChange={(e) => {
+            if (e.target.value === "__custom__") {
+              setUseCustom(true);
+            } else {
+              setUseCustom(false);
+              setModel(e.target.value);
+            }
+          }}
+        >
+          {MODELS.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+          <option value="__custom__">{t("model.custom")}</option>
+        </Select>
+      </Field>
+
+      {useCustom ? (
+        <Field label={t("model.customName")}>
+          <Input
+            type="text"
+            value={customModel}
+            placeholder="e.g. gpt-4o-mini"
+            onChange={(e) => setCustomModel(e.target.value)}
+          />
+        </Field>
+      ) : null}
+
+      <Field label={t("model.thinking")}>
+        <Select value={thinkingIndex} onChange={(e) => setThinkingIndex(Number(e.target.value))}>
+          {THINKING_OPTIONS.map((o, i) => (
+            <option key={o.labelKey} value={i}>
+              {t(o.labelKey)}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <div style={{ color: "var(--ui-text-faint)", fontSize: 12 }}>
+        {t("model.baseUrlKey", {
+          url: settings.baseURL,
+          status: settings.hasApiKey ? t("model.configured") : t("model.missing"),
+        })}
       </div>
-    </div>
+    </Modal>
   );
 }

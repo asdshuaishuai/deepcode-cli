@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "rea
 import type { FileMatch, SkillInfo } from "../../shared/ipc";
 import { useI18n } from "../i18n";
 import { FileMentionMenu } from "./FileMentionMenu";
+import { Button, Switch } from "../ui/index";
 
 type Props = {
   value: string;
@@ -297,127 +298,122 @@ export function Composer(props: Props): JSX.Element {
   }
 
   return (
-    <div className="composer">
-      <div className="composer-inner" ref={composerInnerRef}>
-        {/* Slash command autocomplete menu */}
-        {showSlashMenu && slashMatches.length > 0 ? (
-          <div className="slash-menu">
-            {slashMatches.map((item, i) => (
-              <button
-                key={item.label}
-                className={`slash-option${i === slashIndex ? " active" : ""}`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  applySlash(item);
-                }}
-                onMouseEnter={() => setSlashIndex(i)}
-              >
-                <span className="slash-label">
-                  {item.label}
-                  {item.kind === "skill" ? (selectedSkills.includes(item.name) ? " ✓" : "") : ""}
-                </span>
-                <span className="slash-desc">{item.description}</span>
-              </button>
-            ))}
+    <div className="ui-composer" ref={composerInnerRef}>
+      {/* Slash command autocomplete menu */}
+      {showSlashMenu && slashMatches.length > 0 ? (
+        <div className="ui-slash-menu">
+          {slashMatches.map((item, i) => (
+            <button
+              key={item.label}
+              className={`ui-slash-option${i === slashIndex ? " active" : ""}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                applySlash(item);
+              }}
+              onMouseEnter={() => setSlashIndex(i)}
+            >
+              <span className="ui-slash-label">
+                {item.label}
+                {item.kind === "skill" ? (selectedSkills.includes(item.name) ? " ✓" : "") : ""}
+              </span>
+              <span className="ui-slash-desc">{item.description}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {/* File mention (@) autocomplete menu */}
+      {showFileMenu ? (
+        <FileMentionMenu
+          open={showFileMenu}
+          query={fileQuery}
+          onSelect={applyFileMention}
+          onClose={() => setShowFileMenu(false)}
+        />
+      ) : null}
+
+      {/* Unified floating composer card: attachments → input → toolbar */}
+      <div className="ui-composer-card">
+        {/* Attachments zone: images + selected skill chips */}
+        {imageUrls.length > 0 || selectedSkills.length > 0 ? (
+          <div className="ui-composer-attachments">
+            {imageUrls.length > 0 ? (
+              <div className="ui-image-attachments">
+                {imageUrls.map((url, i) => (
+                  <div key={i} className="ui-image-attachment">
+                    <img src={url} alt={`Attached ${i + 1}`} />
+                    <button className="remove-btn" onClick={() => onRemoveImage?.(i)} title={t("common.remove")}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {selectedSkills.length > 0 ? (
+              <div className="ui-skill-chips">
+                {selectedSkills.map((name) => (
+                  <button
+                    key={name}
+                    className="ui-chip on"
+                    onClick={() => onToggleSkill(name)}
+                    title={t("composer.removeSkill")}
+                  >
+                    ✓ {name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
-        {/* File mention (@) autocomplete menu */}
-        {showFileMenu ? (
-          <FileMentionMenu
-            open={showFileMenu}
-            query={fileQuery}
-            onSelect={applyFileMention}
-            onClose={() => setShowFileMenu(false)}
-          />
-        ) : null}
+        {/* Input */}
+        <textarea
+          ref={textareaRef}
+          className="ui-prompt"
+          rows={1}
+          placeholder={
+            disabled
+              ? t("composer.respondAbove")
+              : planMode
+                ? t("composer.planPlaceholder") || "Describe the plan..."
+                : t("composer.askPlaceholder")
+          }
+          value={value}
+          disabled={disabled}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onSelect={handleSelect}
+          onClick={handleSelect}
+        />
 
-        {/* Unified floating composer card: attachments → input → toolbar */}
-        <div className="composer-card">
-          {/* Attachments zone: images + selected skill chips */}
-          {imageUrls.length > 0 || selectedSkills.length > 0 ? (
-            <div className="composer-attachments">
-              {imageUrls.length > 0 ? (
-                <div className="image-attachments">
-                  {imageUrls.map((url, i) => (
-                    <div key={i} className="image-attachment">
-                      <img src={url} alt={`Attached ${i + 1}`} />
-                      <button className="remove-btn" onClick={() => onRemoveImage?.(i)} title={t("common.remove")}>
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {selectedSkills.length > 0 ? (
-                <div className="skill-chips">
-                  {selectedSkills.map((name) => (
-                    <button
-                      key={name}
-                      className="chip on"
-                      onClick={() => onToggleSkill(name)}
-                      title={t("composer.removeSkill")}
-                    >
-                      ✓ {name}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* Input */}
-          <textarea
-            ref={textareaRef}
-            className="prompt"
-            rows={1}
-            placeholder={
-              disabled
-                ? t("composer.respondAbove")
-                : planMode
-                  ? t("composer.planPlaceholder") || "Describe the plan..."
-                  : t("composer.askPlaceholder")
-            }
-            value={value}
-            disabled={disabled}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onSelect={handleSelect}
-            onClick={handleSelect}
-          />
-
-          {/* Bottom toolbar: plan toggle + status · hint + send/stop */}
-          <div className="composer-toolbar">
-            <div className="composer-toolbar-left">
-              <label className={`toggle${planMode ? " plan-on" : ""}`}>
-                <input type="checkbox" checked={planMode} onChange={onTogglePlan} />
-                {t("composer.planMode")}
-              </label>
-              {busy || errorText || statusText ? (
-                <span className="status-strip">
-                  {busy ? <span className="spinner" /> : null}
-                  {errorText ? (
-                    <span className="err-strip">{errorText}</span>
-                  ) : statusText ? (
-                    <span>{statusText}</span>
-                  ) : null}
-                </span>
-              ) : null}
-            </div>
-            <div className="composer-toolbar-right">
-              <span className="composer-hint">
-                {planMode ? t("composer.planHint") || "Type a plan request · Shift+Tab to toggle" : t("composer.hint")}
+        {/* Bottom toolbar: plan toggle + status · hint + send/stop */}
+        <div className="ui-composer-toolbar">
+          <div className="ui-composer-toolbar-left">
+            <Switch checked={planMode} onChange={onTogglePlan} label={t("composer.planMode")} />
+            {busy || errorText || statusText ? (
+              <span className="ui-status-strip">
+                {busy ? <span className="ui-spinner" /> : null}
+                {errorText ? (
+                  <span className="err-strip">{errorText}</span>
+                ) : statusText ? (
+                  <span>{statusText}</span>
+                ) : null}
               </span>
-              {busy ? (
-                <button className="stop-btn" onClick={onStop}>
-                  {t("composer.stop")}
-                </button>
-              ) : (
-                <button className="send-btn" onClick={onSend} disabled={!canSend}>
-                  {t("composer.send")}
-                </button>
-              )}
-            </div>
+            ) : null}
+          </div>
+          <div className="ui-composer-toolbar-right">
+            <span className="ui-composer-hint">
+              {planMode ? t("composer.planHint") || "Type a plan request · Shift+Tab to toggle" : t("composer.hint")}
+            </span>
+            {busy ? (
+              <Button variant="danger" size="sm" onClick={onStop}>
+                {t("composer.stop")}
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={onSend} disabled={!canSend}>
+                {t("composer.send")}
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -33,6 +33,9 @@ function injectStylesheet(href: string): Promise<void> {
 async function bootstrap(): Promise<void> {
   const { platform } = await api.ready();
   applyAppearance(resolveAppearance(platform));
+  // Shared primitive stylesheet first (theme-agnostic structure + token
+  // fallbacks), then the platform theme file (Aqua / Metro) which binds --ui-*.
+  await injectStylesheet("./ui.css");
   const cssFile = platform === "win32" ? "./styles-metro.css" : "./styles.css";
   await injectStylesheet(cssFile);
   createRoot(container!).render(

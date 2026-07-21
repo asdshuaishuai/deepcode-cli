@@ -237,6 +237,29 @@ export const en = {
   "undo.restoreBoth": "Code + conversation",
   "undo.codeAvailable": "code checkpoint",
   "undo.failed": "Restore failed.",
+
+  // ── Rail (icon navigation) ────────────────────────────────
+  "rail.newSession": "New session",
+  "rail.sessions": "Sessions",
+  "rail.plugins": "Plugin Center",
+  "rail.settings": "Settings",
+  "rail.undo": "Undo / restore",
+  "rail.commands": "Commands (⌘K)",
+
+  // ── Session panel ─────────────────────────────────────────
+  "sessionPanel.collapse": "Collapse panel",
+
+  // ── Command palette ───────────────────────────────────────
+  "command.placeholder": "Type a command…",
+  "command.empty": "No matching commands",
+  "command.new.label": "New session",
+  "command.plan.label": "Toggle Plan mode",
+  "command.model.label": "Model settings",
+  "command.plugins.label": "Plugin Center",
+  "command.settings.label": "Settings",
+  "command.undo.label": "Undo / restore",
+  "command.init.label": "Generate AGENTS.md",
+  "command.raw.label": "Cycle reasoning display",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -475,6 +498,29 @@ export const zh: Record<MessageKey, string> = {
   "undo.restoreBoth": "代码 + 对话",
   "undo.codeAvailable": "代码检查点",
   "undo.failed": "恢复失败。",
+
+  // ── Rail (icon navigation) ────────────────────────────────
+  "rail.newSession": "新建会话",
+  "rail.sessions": "会话",
+  "rail.plugins": "插件中心",
+  "rail.settings": "设置",
+  "rail.undo": "撤销 / 恢复",
+  "rail.commands": "命令面板（⌘K）",
+
+  // ── Session panel ─────────────────────────────────────────
+  "sessionPanel.collapse": "收起面板",
+
+  // ── Command palette ───────────────────────────────────────
+  "command.placeholder": "输入命令…",
+  "command.empty": "无匹配命令",
+  "command.new.label": "新建会话",
+  "command.plan.label": "切换计划模式",
+  "command.model.label": "模型设置",
+  "command.plugins.label": "插件中心",
+  "command.settings.label": "设置",
+  "command.undo.label": "撤销 / 恢复",
+  "command.init.label": "生成 AGENTS.md",
+  "command.raw.label": "切换推理显示",
 };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { en, zh };

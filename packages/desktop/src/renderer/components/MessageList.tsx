@@ -31,26 +31,24 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
       { action: "undo", icon: "↺", title: t("welcome.undoTitle"), desc: t("welcome.undoDesc") },
     ];
     return (
-      <div className="messages">
-        <div className="empty-state">
-          <div className="welcome-hero">
-            <h1>Deep Code</h1>
-            <div className="welcome-subtitle">{t("empty.subtitle")}</div>
-            <div className="tips">{t("empty.tips")}</div>
-          </div>
-          <div className="welcome-quickstart">
-            <div className="welcome-quickstart-label">{t("welcome.quickStart")}</div>
-            <div className="welcome-cards">
+      <div className="ui-conversation">
+        <div className="ui-welcome">
+          <h1>Deep Code</h1>
+          <div className="ui-welcome-subtitle">{t("empty.subtitle")}</div>
+          <div className="ui-welcome-tips">{t("empty.tips")}</div>
+          <div className="ui-welcome-quickstart">
+            <div className="ui-welcome-quickstart-label">{t("welcome.quickStart")}</div>
+            <div className="ui-welcome-cards">
               {cards.map((card) => (
                 <button
                   key={card.action}
                   type="button"
-                  className="welcome-card"
+                  className="ui-welcome-card"
                   onClick={() => onQuickAction?.(card.action)}
                 >
-                  <span className="welcome-card-icon">{card.icon}</span>
-                  <span className="welcome-card-title">{card.title}</span>
-                  <span className="welcome-card-desc">{card.desc}</span>
+                  <span className="ui-welcome-card-icon">{card.icon}</span>
+                  <span className="ui-welcome-card-title">{card.title}</span>
+                  <span className="ui-welcome-card-desc">{card.desc}</span>
                 </button>
               ))}
             </div>
@@ -61,11 +59,11 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
   }
 
   return (
-    <div className="messages">
-      <div className="messages-inner">
+    <div className="ui-conversation">
+      <div className="ui-conversation-inner">
         {messages.length === 0 && !footer ? (
-          <div className="empty-state" style={{ height: "auto", paddingTop: 60 }}>
-            <div>{t("empty.newSession")}</div>
+          <div className="ui-empty" style={{ padding: "60px 0" }}>
+            {t("empty.newSession")}
           </div>
         ) : null}
         {messages.map((message) => (

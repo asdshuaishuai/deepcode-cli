@@ -14,7 +14,7 @@ import {
 import { useI18n } from "../i18n";
 
 function Md({ text }: { text: string }): JSX.Element {
-  return <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
+  return <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
 }
 
 export function Message({
@@ -32,9 +32,9 @@ export function Message({
   if (message.role === "user") {
     const attachments = Array.isArray(message.contentParams) ? message.contentParams.length : 0;
     return (
-      <div className="msg user">
-        <div className="gutter">›</div>
-        <div className="body">
+      <div className="ui-msg user">
+        <div className="ui-msg-gutter">›</div>
+        <div className="ui-msg-body">
           <span style={{ whiteSpace: "pre-wrap" }}>{message.content || t("msg.noContent")}</span>
           {attachments > 0 ? <span> 📎 {t("msg.images", { n: attachments })}</span> : null}
         </div>
@@ -50,10 +50,10 @@ export function Message({
       }
       const summary = buildThinkingSummary(content, message.messageParams);
       return (
-        <div className="msg assistant">
-          <div className="gutter">✧</div>
-          <div className="body">
-            <details className="thinking" open={reasoningMode === "expanded"}>
+        <div className="ui-msg assistant">
+          <div className="ui-msg-gutter">✧</div>
+          <div className="ui-msg-body">
+            <details className="ui-thinking" open={reasoningMode === "expanded"}>
               <summary>
                 {t("msg.thinking")} — {summary || t("msg.reasoning")}
               </summary>
@@ -64,9 +64,9 @@ export function Message({
       );
     }
     return (
-      <div className="msg assistant">
-        <div className="gutter">✦</div>
-        <div className="body">{content ? <Md text={content} /> : null}</div>
+      <div className="ui-msg assistant">
+        <div className="ui-msg-gutter">✦</div>
+        <div className="ui-msg-body">{content ? <Md text={content} /> : null}</div>
       </div>
     );
   }
@@ -78,15 +78,15 @@ export function Message({
     const diffLines = getDiffLines(summary);
     const planLines = getPlanLines(summary);
     return (
-      <div className={`msg tool${summary.ok ? "" : " err"}`}>
-        <div className="gutter">✧</div>
-        <div className="body">
-          <div className="tool-line">
-            <span className="tool-name">{formatStatusName(summary.name)}</span>
-            {params ? <span className="tool-params">{params}</span> : null}
+      <div className={`ui-msg tool${summary.ok ? "" : " err"}`}>
+        <div className="ui-msg-gutter">✧</div>
+        <div className="ui-msg-body">
+          <div className="ui-tool-line">
+            <span className="ui-tool-name">{formatStatusName(summary.name)}</span>
+            {params ? <span className="ui-tool-params">{params}</span> : null}
           </div>
           {diffLines.length > 0 ? (
-            <div className="diff">
+            <div className="ui-diff">
               {diffLines.map((line, i) => (
                 <div key={i} className={line.kind === "added" ? "add" : line.kind === "removed" ? "del" : "ctx"}>
                   {line.marker}
@@ -96,13 +96,13 @@ export function Message({
             </div>
           ) : null}
           {planLines.length > 0 ? (
-            <div className="tool-result">
+            <div className="ui-tool-result">
               <div className="label">└ {t("msg.plan")}</div>
               <div style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{planLines.join("\n")}</div>
             </div>
           ) : null}
           {resultMd ? (
-            <div className="tool-result">
+            <div className="ui-tool-result">
               <div className="label">└ {t("msg.result")}</div>
               <Md text={resultMd} />
             </div>
@@ -115,9 +115,9 @@ export function Message({
   if (message.role === "system") {
     if (message.meta?.isModelChange) {
       return (
-        <div className="msg user">
-          <div className="gutter">›</div>
-          <div className="body" style={{ whiteSpace: "pre-wrap" }}>
+        <div className="ui-msg user">
+          <div className="ui-msg-gutter">›</div>
+          <div className="ui-msg-body" style={{ whiteSpace: "pre-wrap" }}>
             {message.content || ""}
           </div>
         </div>
@@ -125,17 +125,17 @@ export function Message({
     }
     if (message.meta?.skill) {
       return (
-        <div className="msg">
-          <div className="gutter" />
-          <div className="body system-note">⚡ {t("msg.loadedSkill", { name: message.meta.skill.name })}</div>
+        <div className="ui-msg">
+          <div className="ui-msg-gutter" />
+          <div className="ui-msg-body ui-system-note">⚡ {t("msg.loadedSkill", { name: message.meta.skill.name })}</div>
         </div>
       );
     }
     if (message.meta?.isSummary) {
       return (
-        <div className="msg">
-          <div className="gutter" />
-          <div className="body" style={{ color: "var(--text-faint)", fontStyle: "italic" }}>
+        <div className="ui-msg">
+          <div className="ui-msg-gutter" />
+          <div className="ui-msg-body ui-system-note" style={{ fontStyle: "italic" }}>
             {t("msg.summaryInserted")}
           </div>
         </div>

@@ -68,6 +68,7 @@ const rendererConfig = {
 async function copyStaticAssets() {
   await mkdir(resolve(outdir, "renderer"), { recursive: true });
   await cp(resolve(__dirname, "src/renderer/index.html"), resolve(outdir, "renderer/index.html"));
+  await cp(resolve(__dirname, "src/renderer/ui.css"), resolve(outdir, "renderer/ui.css"));
   await cp(resolve(__dirname, "src/renderer/styles.css"), resolve(outdir, "renderer/styles.css"));
   // styles-metro.css 为新建文件,构建时若不存在则跳过(不报错)
   const metroCss = resolve(__dirname, "src/renderer/styles-metro.css");

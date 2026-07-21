@@ -8,6 +8,7 @@ import {
   type PermissionResult,
 } from "../lib/permissions";
 import { useI18n, type MessageKey } from "../i18n";
+import { Button, Card, CardHeader, Row } from "../ui/index";
 
 type Props = {
   requests: AskPermissionRequest[];
@@ -76,38 +77,40 @@ export function PermissionCard({ requests, onSubmit, onCancel }: Props): JSX.Ele
   const allowAlways = isAlwaysAllowedScope(prompt.scope);
 
   return (
-    <div className="card warn">
-      <div className="card-title">
+    <Card warn>
+      <CardHeader>
         {t("perm.required")}{" "}
-        <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>
+        <span style={{ color: "var(--ui-text-faint)", fontWeight: 400 }}>
           {Math.min(effectiveIndex + 1, prompts.length)}/{prompts.length}
         </span>
-      </div>
+      </CardHeader>
       <div style={{ fontWeight: 600 }}>{prompt.request.name}</div>
-      <div className="mono">{prompt.request.command}</div>
+      <div className="ui-mono">{prompt.request.command}</div>
       {prompt.request.description ? (
-        <div style={{ color: "var(--text-dim)", fontSize: 12.5 }}>{prompt.request.description}</div>
+        <div style={{ color: "var(--ui-text-dim)", fontSize: 12.5 }}>{prompt.request.description}</div>
       ) : null}
       <div style={{ marginTop: 8 }}>{t("perm.proceed")}</div>
-      <div className="opt-row">
-        <button className="opt" onClick={() => commit("allow")}>
+      <div className="ui-opt-row">
+        <button className="ui-opt" onClick={() => commit("allow")}>
           {t("perm.yes")}
         </button>
         {allowAlways ? (
-          <button className="opt" onClick={() => commit("always")}>
+          <button className="ui-opt" onClick={() => commit("always")}>
             {t("perm.always")}
-            <span className="scope-tag" style={{ color: scopeRiskColor(prompt.scope) }}>
+            <span className="ui-scope-tag" style={{ color: scopeRiskColor(prompt.scope) }}>
               {t(`scope.${prompt.scope}` as MessageKey)}
             </span>
           </button>
         ) : null}
-        <button className="opt" onClick={() => commit("deny")}>
+        <button className="ui-opt" onClick={() => commit("deny")}>
           {t("perm.no")}
         </button>
       </div>
-      <div className="card-actions">
-        <button onClick={onCancel}>{t("common.interrupt")}</button>
-      </div>
-    </div>
+      <Row justify="flex-end">
+        <Button size="sm" onClick={onCancel}>
+          {t("common.interrupt")}
+        </Button>
+      </Row>
+    </Card>
   );
 }

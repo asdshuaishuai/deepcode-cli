@@ -1,14 +1,15 @@
 import { useMemo, useState, type JSX } from "react";
 import type { SerializableSessionEntry } from "../../shared/ipc";
 import { useI18n, type MessageKey, type Translate } from "../i18n";
+import { Button, IconButton, Input, StatusDot } from "../ui/index";
 
 type Props = {
   sessions: SerializableSessionEntry[];
   activeId: string | null;
   onSelect: (id: string) => void;
-  onNew: () => void;
   onDelete: (id: string) => void;
   onRename: (id: string, summary: string) => void;
+  onCollapse: () => void;
 };
 
 const KNOWN_STATUSES = new Set([
@@ -48,10 +49,7 @@ function highlightText(text: string, query: string): JSX.Element {
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <mark
-            key={i}
-            style={{ background: "var(--yellow)", color: "var(--text)", borderRadius: 3, padding: "0 2px" }}
-          >
+          <mark key={i} className="ui-highlight">
             {part}
           </mark>
         ) : (
@@ -62,7 +60,7 @@ function highlightText(text: string, query: string): JSX.Element {
   );
 }
 
-export function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, onRename }: Props): JSX.Element {
+export function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onCollapse }: Props): JSX.Element {
   const { t } = useI18n();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -93,38 +91,35 @@ export function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, onRenam
   }
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-head">
+    <div className="ui-session-panel">
+      <div className="ui-session-panel-head">
         <span>{t("sidebar.sessions")}</span>
-        <button className="btn-new gel" onClick={onNew}>
-          {t("sidebar.new")}
-        </button>
+        <IconButton onClick={onCollapse} title={t("sessionPanel.collapse")} aria-label={t("sessionPanel.collapse")}>
+          ⟨
+        </IconButton>
       </div>
 
-      {/* Search input */}
-      <div className="sidebar-search">
-        <input
+      <div className="ui-session-search">
+        <Input
           type="text"
-          placeholder={t("sidebar.search") || "Search sessions…"}
+          placeholder={t("sidebar.search")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
-      <div className="session-list">
+      <div className="ui-session-list">
         {filteredSessions.length === 0 ? (
-          <div style={{ padding: "8px 10px", color: "var(--text-faint)", fontSize: 12 }}>
-            {searchQuery ? t("sidebar.noResults") || "No matching sessions." : t("sidebar.none")}
-          </div>
+          <div className="ui-session-empty">{searchQuery ? t("sidebar.noResults") : t("sidebar.none")}</div>
         ) : null}
         {filteredSessions.map((entry) => (
           <div
             key={entry.id}
-            className={`session-item${entry.id === activeId ? " active" : ""}`}
+            className={`ui-session-item${entry.id === activeId ? " active" : ""}`}
             onClick={() => onSelect(entry.id)}
           >
             {editingId === entry.id ? (
-              <input
+              <Input
                 type="text"
                 autoFocus
                 value={draft}
@@ -135,32 +130,27 @@ export function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, onRenam
                   if (e.key === "Enter") commitRename(entry.id);
                   if (e.key === "Escape") setEditingId(null);
                 }}
-                style={{
-                  width: "100%",
-                  background: "var(--bg)",
-                  border: "1px solid var(--accent)",
-                  color: "var(--text)",
-                  borderRadius: 6,
-                  padding: "4px 6px",
-                  fontSize: 13,
-                }}
               />
             ) : (
-              <div className="session-title">
+              <div className="ui-session-title">
                 {searchQuery
                   ? highlightText(entry.summary || t("sidebar.untitled"), searchQuery)
                   : entry.summary || t("sidebar.untitled")}
               </div>
             )}
-            <div className="session-meta">
-              <span className={`status-dot ${entry.status}`} />
+            <div className="ui-session-meta">
+              <StatusDot status={entry.status} />
               <span>{statusLabel(entry.status, t)}</span>
               <span>· {relativeTime(entry.updateTime, t)}</span>
             </div>
             {entry.id === activeId && editingId !== entry.id ? (
-              <div className="session-actions" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => beginRename(entry)}>{t("sidebar.rename")}</button>
-                <button onClick={() => onDelete(entry.id)}>{t("sidebar.delete")}</button>
+              <div className="ui-session-actions" onClick={(e) => e.stopPropagation()}>
+                <Button size="sm" variant="subtle" onClick={() => beginRename(entry)}>
+                  {t("sidebar.rename")}
+                </Button>
+                <Button size="sm" variant="subtle" onClick={() => onDelete(entry.id)}>
+                  {t("sidebar.delete")}
+                </Button>
               </div>
             ) : null}
           </div>
