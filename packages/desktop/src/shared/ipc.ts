@@ -49,6 +49,15 @@ export const IpcRequest = {
 
   UndoList: "undo:list",
   UndoRestore: "undo:restore",
+
+  // Plugin channels
+  PluginSearchSkills: "plugin:searchSkills",
+  PluginRefreshSkills: "plugin:refreshSkills",
+  PluginUpsertMcpServer: "plugin:upsertMcpServer",
+  PluginRemoveMcpServer: "plugin:removeMcpServer",
+
+  /** Scan workspace files for @file mentions */
+  ScanFiles: "app:scanFiles",
 } as const;
 
 /** Event channels (main -> renderer via webContents.send). */
@@ -59,6 +68,7 @@ export const IpcEvent = {
   McpStatusChanged: "event:mcpStatusChanged",
   ProcessStdout: "event:processStdout",
   ProjectRootChanged: "event:projectRootChanged",
+  PluginEvent: "event:pluginEvent",
 } as const;
 
 export type UndoRestoreMode = "conversation" | "code-and-conversation";
@@ -126,9 +136,15 @@ export type EditableSettings = {
 
 export type ProcessStdoutEvent = { pid: number; chunk: string };
 
+/** A file match for @file mention autocomplete. */
+export type FileMatch = {
+  path: string;
+  type: "file" | "directory";
+};
+
 /** The typed surface exposed on `window.deepcode` from the preload script. */
 export type DesktopApi = {
-  ready(): Promise<{ projectRoot: string }>;
+  ready(): Promise<{ projectRoot: string; platform: NodeJS.Platform }>;
   pickFolder(): Promise<string | null>;
   setProjectRoot(root: string): Promise<{ projectRoot: string }>;
   getProjectRoot(): Promise<string>;
@@ -161,13 +177,36 @@ export type DesktopApi = {
   listUndoTargets(sessionId: string): Promise<UndoTarget[]>;
   restoreUndo(sessionId: string, messageId: string, mode: UndoRestoreMode): Promise<{ ok: boolean; error?: string }>;
 
+  // ── Plugin API ────────────────────────────────────────────────────────────
+  /** Search skills by keyword (name/description, case-insensitive). */
+  pluginSearchSkills(query: string, sessionId?: string): Promise<SkillInfo[]>;
+  /** Force-refresh skills from disk. */
+  pluginRefreshSkills(sessionId?: string): Promise<SkillInfo[]>;
+  /** Add or update an MCP server config (instant reconnect). */
+  pluginUpsertMcpServer(name: string, command: string, args?: string[], env?: Record<string, string>): Promise<void>;
+  /** Remove an MCP server. */
+  pluginRemoveMcpServer(name: string): Promise<void>;
+
+  // ── Events ────────────────────────────────────────────────────────────────
   onAssistantMessage(cb: (message: SessionMessage) => void): () => void;
   onSessionEntryUpdated(cb: (entry: SerializableSessionEntry) => void): () => void;
   onLlmStreamProgress(cb: (progress: unknown) => void): () => void;
   onMcpStatusChanged(cb: () => void): () => void;
   onProcessStdout(cb: (event: ProcessStdoutEvent) => void): () => void;
   onProjectRootChanged(cb: (root: string) => void): () => void;
+  onPluginEvent(cb: (event: PluginEventPayload) => void): () => void;
+
+  // ── File scanning (for @file mentions) ──────────────────────────────────
+  /** Scan workspace files matching a query. Returns up to 20 results. */
+  scanFiles(query: string): Promise<FileMatch[]>;
 };
+
+/** A unified plugin event payload (mirrors PluginEvent from plugin-manager.ts). */
+export type PluginEventPayload =
+  | { type: "mcp:status-changed"; payload: McpServerStatus[] }
+  | { type: "mcp:server-error"; payload: { name: string; error: string } }
+  | { type: "skills:changed"; payload: SkillInfo[] }
+  | { type: "plugin:error"; payload: { source: string; error: string } };
 
 export type {
   AskPermissionRequest,

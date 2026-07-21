@@ -19,8 +19,9 @@ import { PermissionCard } from "./components/PermissionCard";
 import { QuestionCard } from "./components/QuestionCard";
 import { PlanCard } from "./components/PlanCard";
 import { ModelModal } from "./components/ModelModal";
-import { McpModal } from "./components/McpModal";
+import { PluginCenterModal } from "./components/PluginCenterModal";
 import { SettingsModal } from "./components/SettingsModal";
+import { UndoModal } from "./components/UndoModal";
 import type { PermissionResult } from "./lib/permissions";
 import {
   findPendingAskUserQuestion,
@@ -28,6 +29,15 @@ import {
   type AskUserQuestionAnswers,
 } from "./lib/ask-question";
 import { extractProposedPlan, getImplementationPrompt, type PlanImplementationChoice } from "./lib/plan";
+import {
+  getStoredReasoningMode,
+  nextReasoningMode,
+  resolveAppearance,
+  setAppearance as persistAppearance,
+  setReasoningMode as persistReasoningMode,
+  type Appearance,
+  type ReasoningMode,
+} from "./lib/appearance";
 import { useI18n } from "./i18n";
 
 type PendingPermissionReply = {
@@ -56,6 +66,7 @@ export function App(): JSX.Element {
   const { t } = useI18n();
   const [projectRoot, setProjectRoot] = useState("");
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
+  const [platform, setPlatform] = useState<string>("");
   const [sessions, setSessions] = useState<SerializableSessionEntry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<SessionMessage[]>([]);
@@ -64,6 +75,7 @@ export function App(): JSX.Element {
   const [mcpStatuses, setMcpStatuses] = useState<McpServerStatus[]>([]);
 
   const [draft, setDraft] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [planMode, setPlanMode] = useState(false);
   const [statusLine, setStatusLine] = useState<string | null>(null);
@@ -75,8 +87,11 @@ export function App(): JSX.Element {
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
   const [dismissedQuestionIds, setDismissedQuestionIds] = useState<Set<string>>(() => new Set());
 
-  const [modal, setModal] = useState<"model" | "mcp" | "settings" | null>(null);
+  const [modal, setModal] = useState<"model" | "plugins" | "settings" | "undo" | null>(null);
   const [editable, setEditable] = useState<EditableSettings | null>(null);
+
+  const [appearance, setAppearanceState] = useState<Appearance>("light");
+  const [reasoningMode, setReasoningModeState] = useState<ReasoningMode>(() => getStoredReasoningMode());
 
   const activeIdRef = useRef<string | null>(null);
   activeIdRef.current = activeId;
@@ -127,9 +142,11 @@ export function App(): JSX.Element {
   useEffect(() => {
     let disposed = false;
     void (async () => {
-      const { projectRoot: root } = await api.ready();
+      const { projectRoot: root, platform: plat } = await api.ready();
       if (disposed) return;
       setProjectRoot(root);
+      setPlatform(plat);
+      setAppearanceState(resolveAppearance(plat));
       await Promise.all([refreshSessions(), refreshSettings(), refreshSkills(), refreshMcp()]);
       const active = await api.getActiveSession();
       if (!disposed && active) {
@@ -238,17 +255,19 @@ export function App(): JSX.Element {
   const handleSend = useCallback(() => {
     const text = draft.trim();
     const skillObjs = skills.filter((s) => selectedSkills.includes(s.name));
-    if (!text && skillObjs.length === 0) {
+    if (!text && skillObjs.length === 0 && imageUrls.length === 0) {
       return;
     }
     setDraft("");
     setSelectedSkills([]);
+    setImageUrls([]);
     void runPrompt({
       text: text || undefined,
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
       skills: skillObjs.length > 0 ? skillObjs : undefined,
       planMode,
     });
-  }, [draft, planMode, runPrompt, selectedSkills, skills]);
+  }, [draft, imageUrls, planMode, runPrompt, selectedSkills, skills]);
 
   const handleStop = useCallback(() => {
     void api.interrupt();
@@ -325,6 +344,32 @@ export function App(): JSX.Element {
     setModal("settings");
   }, []);
 
+  const handleToggleAppearance = useCallback(() => {
+    setAppearanceState((prev) => {
+      const next: Appearance = prev === "dark" ? "light" : "dark";
+      persistAppearance(next);
+      return next;
+    });
+  }, []);
+
+  const handleCycleReasoning = useCallback(() => {
+    setReasoningModeState((prev) => {
+      const next = nextReasoningMode(prev);
+      persistReasoningMode(next);
+      return next;
+    });
+  }, []);
+
+  const handleUndoRestored = useCallback(async () => {
+    const id = activeIdRef.current;
+    if (id) {
+      setMessages(await api.listMessages(id));
+      const entry = await api.getSession(id);
+      setActiveStatus(entry?.status ?? null);
+    }
+    await refreshSessions();
+  }, [refreshSessions]);
+
   const handleSaveSettings = useCallback(
     async (next: EditableSettings) => {
       const { summary, editable: fresh } = await api.updateSettings(next);
@@ -387,13 +432,20 @@ export function App(): JSX.Element {
   return (
     <div className="app">
       <TopBar
+        platform={platform}
         projectRoot={projectRoot}
         settings={settings}
         mcpCount={mcpStatuses.length}
+        skillCount={skills.length}
+        appearance={appearance}
+        reasoningMode={reasoningMode}
         onPickFolder={() => void handlePickFolder()}
         onOpenModel={() => setModal("model")}
-        onOpenMcp={() => setModal("mcp")}
+        onOpenPlugins={() => setModal("plugins")}
         onOpenSettings={() => void handleOpenSettings()}
+        onToggleAppearance={handleToggleAppearance}
+        onCycleReasoning={handleCycleReasoning}
+        onOpenUndo={() => setModal("undo")}
       />
       <Sidebar
         sessions={sessions}
@@ -404,7 +456,23 @@ export function App(): JSX.Element {
         onRename={(id, summary) => void handleRenameSession(id, summary)}
       />
       <div className="main">
-        <MessageList messages={messages} hasActiveSession={activeId !== null || messages.length > 0} footer={footer} />
+        <MessageList
+          messages={messages}
+          hasActiveSession={activeId !== null || messages.length > 0}
+          reasoningMode={reasoningMode}
+          onQuickAction={(action) => {
+            if (action === "plan") {
+              setPlanMode((v) => !v);
+            } else if (action === "init") {
+              void runPrompt({ text: "/init" });
+            } else if (action === "skills") {
+              setModal("plugins");
+            } else if (action === "undo") {
+              setModal("undo");
+            }
+          }}
+          footer={footer}
+        />
         <Composer
           value={draft}
           onChange={setDraft}
@@ -421,15 +489,45 @@ export function App(): JSX.Element {
           }
           statusText={statusLine}
           errorText={errorLine}
+          imageUrls={imageUrls}
+          onRemoveImage={(i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+          onSlashCommand={(cmd) => {
+            if (cmd === "new") {
+              handleNewSession();
+            } else if (cmd === "plan") {
+              setPlanMode((v) => !v);
+            } else if (cmd === "model") {
+              setModal("model");
+            } else if (cmd === "mcp" || cmd === "plugins") {
+              setModal("plugins");
+            } else if (cmd === "skills") {
+              // Skills are shown as chips already, nothing extra needed
+            } else if (cmd === "settings") {
+              void handleOpenSettings();
+            } else if (cmd === "undo") {
+              setModal("undo");
+            } else if (cmd === "init") {
+              void runPrompt({ text: "/init" });
+            } else if (cmd === "raw") {
+              handleCycleReasoning();
+            } else if (cmd === "continue") {
+              handleSend();
+            }
+          }}
         />
       </div>
 
       {modal === "model" && settings ? (
         <ModelModal settings={settings} onApply={(sel) => void handleSetModel(sel)} onClose={() => setModal(null)} />
       ) : null}
-      {modal === "mcp" ? (
-        <McpModal
+      {modal === "plugins" ? (
+        <PluginCenterModal
           servers={mcpStatuses}
+          skills={skills}
+          selectedSkills={selectedSkills}
+          onToggleSkill={(name) =>
+            setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
+          }
           onReconnect={(name) => void api.mcpReconnect(name)}
           onClose={() => setModal(null)}
         />
@@ -440,6 +538,9 @@ export function App(): JSX.Element {
           onSave={(next) => void handleSaveSettings(next)}
           onClose={() => setModal(null)}
         />
+      ) : null}
+      {modal === "undo" ? (
+        <UndoModal sessionId={activeId} onClose={() => setModal(null)} onRestored={() => void handleUndoRestored()} />
       ) : null}
     </div>
   );

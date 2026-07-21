@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import type { SessionMessage } from "../../shared/ipc";
+import type { ReasoningMode } from "../lib/appearance";
 import { renderMarkdown } from "../markdown";
 import {
   buildThinkingSummary,
@@ -16,7 +17,13 @@ function Md({ text }: { text: string }): JSX.Element {
   return <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
 }
 
-export function Message({ message }: { message: SessionMessage }): JSX.Element | null {
+export function Message({
+  message,
+  reasoningMode = "normal",
+}: {
+  message: SessionMessage;
+  reasoningMode?: ReasoningMode;
+}): JSX.Element | null {
   const { t } = useI18n();
   if (!message.visible) {
     return null;
@@ -38,12 +45,15 @@ export function Message({ message }: { message: SessionMessage }): JSX.Element |
   if (message.role === "assistant") {
     const content = (message.content || "").trim();
     if (message.meta?.asThinking) {
+      if (reasoningMode === "hidden") {
+        return null;
+      }
       const summary = buildThinkingSummary(content, message.messageParams);
       return (
         <div className="msg assistant">
           <div className="gutter">✧</div>
           <div className="body">
-            <details className="thinking">
+            <details className="thinking" open={reasoningMode === "expanded"}>
               <summary>
                 {t("msg.thinking")} — {summary || t("msg.reasoning")}
               </summary>

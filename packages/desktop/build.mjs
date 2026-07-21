@@ -10,6 +10,7 @@
 
 import { build, context } from "esbuild";
 import { cp, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -68,6 +69,11 @@ async function copyStaticAssets() {
   await mkdir(resolve(outdir, "renderer"), { recursive: true });
   await cp(resolve(__dirname, "src/renderer/index.html"), resolve(outdir, "renderer/index.html"));
   await cp(resolve(__dirname, "src/renderer/styles.css"), resolve(outdir, "renderer/styles.css"));
+  // styles-metro.css 为新建文件,构建时若不存在则跳过(不报错)
+  const metroCss = resolve(__dirname, "src/renderer/styles-metro.css");
+  if (existsSync(metroCss)) {
+    await cp(metroCss, resolve(outdir, "renderer/styles-metro.css"));
+  }
 }
 
 async function run() {

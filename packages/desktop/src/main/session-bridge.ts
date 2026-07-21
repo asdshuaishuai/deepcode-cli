@@ -201,6 +201,21 @@ export class SessionBridge {
     this.manager.dispose();
   }
 
+  // ── Plugin integration ──────────────────────────────────────────────────────
+
+  /**
+   * Return the underlying SessionManager instance so PluginManager can call
+   * low-level methods without duplicating them here.
+   */
+  getSessionManager(): SessionManager {
+    return this.manager;
+  }
+
+  /** Return the raw resolved settings (for PluginManager bootstrapping). */
+  getRawSettings(): DeepcodingSettings {
+    return resolveCurrentSettings(this.projectRoot);
+  }
+
   // ── Sessions ──────────────────────────────────────────────────────────────
   listSessions(): SerializableSessionEntry[] {
     return this.manager.listSessions().map(toSerializableEntry);

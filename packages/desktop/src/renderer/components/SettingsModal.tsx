@@ -45,7 +45,7 @@ function emptyServer(): EditableMcpServer {
 }
 
 export function SettingsModal({ initial, onSave, onClose }: Props): JSX.Element {
-  const { t } = useI18n();
+  const { t, locale, setLocale } = useI18n();
   const [s, setS] = useState<EditableSettings>(initial);
   const [tab, setTab] = useState<Tab>("connection");
   const [showKey, setShowKey] = useState(false);
@@ -152,6 +152,14 @@ export function SettingsModal({ initial, onSave, onClose }: Props): JSX.Element 
                   onChange={(e) => patch({ temperature: e.target.value })}
                 />
                 <div className="hint">{t("settings.temperatureHint")}</div>
+              </div>
+
+              <div className="field">
+                <label>{t("settings.language")}</label>
+                <select value={locale} onChange={(e) => setLocale(e.target.value as "en" | "zh")}>
+                  <option value="zh">中文</option>
+                  <option value="en">English</option>
+                </select>
               </div>
             </>
           ) : null}

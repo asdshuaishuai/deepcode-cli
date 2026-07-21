@@ -48,9 +48,21 @@ const api: DesktopApi = {
   onAssistantMessage: (cb) => subscribe(IpcEvent.AssistantMessage, cb as (p: never) => void),
   onSessionEntryUpdated: (cb) => subscribe(IpcEvent.SessionEntryUpdated, cb as (p: never) => void),
   onLlmStreamProgress: (cb) => subscribe(IpcEvent.LlmStreamProgress, cb as (p: never) => void),
+  // ── Plugin API ────────────────────────────────────────────────────────────
+  pluginSearchSkills: (query, sessionId) => ipcRenderer.invoke(IpcRequest.PluginSearchSkills, query, sessionId),
+  pluginRefreshSkills: (sessionId) => ipcRenderer.invoke(IpcRequest.PluginRefreshSkills, sessionId),
+  pluginUpsertMcpServer: (name, command, args, env) =>
+    ipcRenderer.invoke(IpcRequest.PluginUpsertMcpServer, name, command, args, env),
+  pluginRemoveMcpServer: (name) => ipcRenderer.invoke(IpcRequest.PluginRemoveMcpServer, name),
+
+  // ── Events ────────────────────────────────────────────────────────────────
   onMcpStatusChanged: (cb) => subscribe(IpcEvent.McpStatusChanged, cb as (p: never) => void),
   onProcessStdout: (cb) => subscribe(IpcEvent.ProcessStdout, cb as (p: never) => void),
   onProjectRootChanged: (cb) => subscribe(IpcEvent.ProjectRootChanged, cb as (p: never) => void),
+  onPluginEvent: (cb) => subscribe(IpcEvent.PluginEvent, cb as (p: never) => void),
+
+  // ── File scanning ───────────────────────────────────────────────────────
+  scanFiles: (query) => ipcRenderer.invoke(IpcRequest.ScanFiles, query),
 };
 
 contextBridge.exposeInMainWorld("deepcode", api);

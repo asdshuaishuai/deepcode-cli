@@ -25,6 +25,8 @@ export const en = {
   "topbar.noApiKey": "⚠ No API key configured",
   "topbar.configureApiKey": "Configure API key",
   "topbar.languageTitle": "Language",
+  "topbar.pluginsTitle": "Plugin Center",
+  "topbar.plugins": "Plugins",
   "window.close": "Close",
   "window.minimize": "Minimize",
   "window.zoom": "Zoom",
@@ -34,6 +36,8 @@ export const en = {
   "sidebar.new": "+ New",
   "sidebar.none": "No sessions yet.",
   "sidebar.untitled": "Untitled session",
+  "sidebar.search": "Search sessions…",
+  "sidebar.noResults": "No matching sessions.",
   "sidebar.rename": "Rename",
   "sidebar.delete": "Delete",
 
@@ -59,12 +63,24 @@ export const en = {
   "composer.stop": "Stop",
   "composer.send": "Send",
   "composer.planMode": "Plan mode",
+  "composer.planPlaceholder": "Describe the plan…",
+  "composer.planHint": "Type a plan request · Shift+Tab to toggle",
+  "composer.removeSkill": "Remove skill",
   "composer.hint": "Enter to send · Shift+Enter for newline",
 
   // ── Empty states ──────────────────────────────────────────
   "empty.subtitle": "Start a conversation to build, refactor, or explore your codebase.",
   "empty.tips": "Pick a project folder above, then type a request below.",
   "empty.newSession": "New session — send your first message.",
+  "welcome.quickStart": "Quick start",
+  "welcome.planTitle": "Plan first",
+  "welcome.planDesc": "Draft a read-only plan before touching code.",
+  "welcome.initTitle": "Generate AGENTS.md",
+  "welcome.initDesc": "Let Deep Code document this project for agents.",
+  "welcome.skillsTitle": "Skills & MCP",
+  "welcome.skillsDesc": "Browse plugins and attach skills to a task.",
+  "welcome.undoTitle": "Undo & restore",
+  "welcome.undoDesc": "Roll back the conversation or the code.",
 
   // ── Message rendering ─────────────────────────────────────
   "msg.noContent": "(no content)",
@@ -119,6 +135,14 @@ export const en = {
   "mcpStatus.reconnecting": "reconnecting",
   "mcpStatus.failed": "failed",
 
+  // ── Plugin center ────────────────────────────────────────
+  "plugins.title": "Plugin Center",
+  "plugins.tab.skills": "Skills",
+  "plugins.tab.mcp": "MCP Servers",
+  "plugins.skills.none": "No skills found. Place a SKILL.md inside the .deepcode/skills/ directory.",
+  "plugins.skills.loaded": "loaded",
+  "plugins.skills.attach": "Attach to prompt",
+
   // ── Model modal ───────────────────────────────────────────
   "model.title": "Model settings",
   "model.model": "Model",
@@ -168,6 +192,7 @@ export const en = {
   "settings.args": "args (space separated, e.g. -y @playwright/mcp@latest)",
   "settings.envLines": "env, one KEY=VALUE per line",
   "settings.addServer": "+ Add server",
+  "settings.language": "Language",
   "decision.default": "default",
   "decision.allow": "allow",
   "decision.ask": "ask",
@@ -194,6 +219,24 @@ export const en = {
   "permScope.network.hint": "Outbound network requests",
   "permScope.mcp.label": "MCP tools",
   "permScope.mcp.hint": "Invoke tools from MCP servers",
+
+  // ── Appearance / reasoning (top bar) ──────────────────────
+  "topbar.appearanceLight": "Light appearance — click for dark",
+  "topbar.appearanceDark": "Dark appearance — click for light",
+  "topbar.reasoningNormal": "Reasoning: collapsed — click to expand",
+  "topbar.reasoningExpanded": "Reasoning: expanded — click to hide",
+  "topbar.reasoningHidden": "Reasoning: hidden — click to collapse",
+  "topbar.undoTitle": "Undo / restore a checkpoint",
+
+  // ── Undo modal ────────────────────────────────────────────
+  "undo.title": "Undo & restore",
+  "undo.subtitle": "Pick a checkpoint to roll back to.",
+  "undo.none": "No restore points in this session yet.",
+  "undo.needSession": "Open a session first to see its checkpoints.",
+  "undo.restoreConversation": "Conversation only",
+  "undo.restoreBoth": "Code + conversation",
+  "undo.codeAvailable": "code checkpoint",
+  "undo.failed": "Restore failed.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -221,6 +264,8 @@ export const zh: Record<MessageKey, string> = {
   "topbar.noApiKey": "⚠ 未配置 API Key",
   "topbar.configureApiKey": "配置 API Key",
   "topbar.languageTitle": "语言",
+  "topbar.pluginsTitle": "插件中心",
+  "topbar.plugins": "插件",
   "window.close": "关闭",
   "window.minimize": "最小化",
   "window.zoom": "缩放",
@@ -230,6 +275,8 @@ export const zh: Record<MessageKey, string> = {
   "sidebar.new": "+ 新建",
   "sidebar.none": "暂无会话。",
   "sidebar.untitled": "未命名会话",
+  "sidebar.search": "搜索会话…",
+  "sidebar.noResults": "无匹配会话。",
   "sidebar.rename": "重命名",
   "sidebar.delete": "删除",
 
@@ -255,12 +302,24 @@ export const zh: Record<MessageKey, string> = {
   "composer.stop": "停止",
   "composer.send": "发送",
   "composer.planMode": "计划模式",
+  "composer.planPlaceholder": "描述计划…",
+  "composer.planHint": "输入计划请求 · Shift+Tab 切换",
+  "composer.removeSkill": "移除技能",
   "composer.hint": "回车发送 · Shift+回车换行",
 
   // ── Empty states ──────────────────────────────────────────
   "empty.subtitle": "开始对话，构建、重构或探索你的代码库。",
   "empty.tips": "先在上方选择项目文件夹，然后在下方输入需求。",
   "empty.newSession": "新会话 —— 发送你的第一条消息。",
+  "welcome.quickStart": "快速开始",
+  "welcome.planTitle": "先规划",
+  "welcome.planDesc": "在改动代码前先起草一份只读计划。",
+  "welcome.initTitle": "生成 AGENTS.md",
+  "welcome.initDesc": "让 Deep Code 为智能体记录本项目。",
+  "welcome.skillsTitle": "技能与 MCP",
+  "welcome.skillsDesc": "浏览插件并为任务附加技能。",
+  "welcome.undoTitle": "撤销与恢复",
+  "welcome.undoDesc": "回滚对话或代码。",
 
   // ── Message rendering ─────────────────────────────────────
   "msg.noContent": "（无内容）",
@@ -315,6 +374,14 @@ export const zh: Record<MessageKey, string> = {
   "mcpStatus.reconnecting": "重连中",
   "mcpStatus.failed": "失败",
 
+  // ── Plugin center ────────────────────────────────────────
+  "plugins.title": "插件中心",
+  "plugins.tab.skills": "技能",
+  "plugins.tab.mcp": "MCP 服务器",
+  "plugins.skills.none": "未发现技能。将 SKILL.md 放入 .deepcode/skills/ 目录即可。",
+  "plugins.skills.loaded": "已加载",
+  "plugins.skills.attach": "附加到提示",
+
   // ── Model modal ───────────────────────────────────────────
   "model.title": "模型设置",
   "model.model": "模型",
@@ -363,6 +430,7 @@ export const zh: Record<MessageKey, string> = {
   "settings.args": "参数（空格分隔，如 -y @playwright/mcp@latest）",
   "settings.envLines": "环境变量，每行一条 KEY=VALUE",
   "settings.addServer": "+ 添加服务器",
+  "settings.language": "语言",
   "decision.default": "默认",
   "decision.allow": "允许",
   "decision.ask": "询问",
@@ -389,6 +457,24 @@ export const zh: Record<MessageKey, string> = {
   "permScope.network.hint": "对外网络请求",
   "permScope.mcp.label": "MCP 工具",
   "permScope.mcp.hint": "调用 MCP 服务器的工具",
+
+  // ── Appearance / reasoning (top bar) ──────────────────────
+  "topbar.appearanceLight": "浅色外观 — 点击切换深色",
+  "topbar.appearanceDark": "深色外观 — 点击切换浅色",
+  "topbar.reasoningNormal": "推理：已折叠 — 点击展开",
+  "topbar.reasoningExpanded": "推理：已展开 — 点击隐藏",
+  "topbar.reasoningHidden": "推理：已隐藏 — 点击折叠",
+  "topbar.undoTitle": "撤销 / 恢复到检查点",
+
+  // ── Undo modal ────────────────────────────────────────────
+  "undo.title": "撤销与恢复",
+  "undo.subtitle": "选择要回滚到的检查点。",
+  "undo.none": "当前会话暂无可恢复的检查点。",
+  "undo.needSession": "请先打开一个会话以查看检查点。",
+  "undo.restoreConversation": "仅对话",
+  "undo.restoreBoth": "代码 + 对话",
+  "undo.codeAvailable": "代码检查点",
+  "undo.failed": "恢复失败。",
 };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { en, zh };

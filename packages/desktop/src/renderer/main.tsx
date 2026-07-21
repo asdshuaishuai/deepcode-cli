@@ -2,16 +2,46 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { I18nProvider } from "./i18n";
+import { api } from "./api";
+import { applyAppearance, resolveAppearance } from "./lib/appearance";
 
 const container = document.getElementById("root");
 if (!container) {
   throw new Error("Root element #root not found");
 }
 
-createRoot(container).render(
-  <StrictMode>
-    <I18nProvider>
-      <App />
-    </I18nProvider>
-  </StrictMode>
-);
+function injectStylesheet(href: string): Promise<void> {
+  return new Promise((resolve) => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.onload = () => resolve();
+    link.onerror = () => {
+      // 回退到 Aqua 主题,保证页面不裸奔
+      if (href !== "./styles.css") {
+        injectStylesheet("./styles.css").then(resolve);
+      } else {
+        // 连 Aqua 都加载失败,认命,直接 mount
+        console.error("[desktop] failed to load any stylesheet");
+        resolve();
+      }
+    };
+    document.head.appendChild(link);
+  });
+}
+
+async function bootstrap(): Promise<void> {
+  const { platform } = await api.ready();
+  applyAppearance(resolveAppearance(platform));
+  const cssFile = platform === "win32" ? "./styles-metro.css" : "./styles.css";
+  await injectStylesheet(cssFile);
+  createRoot(container!).render(
+    <StrictMode>
+      <I18nProvider>
+        <App />
+      </I18nProvider>
+    </StrictMode>
+  );
+}
+
+void bootstrap();

@@ -10,6 +10,8 @@ import type { ModelConfigSelection, UserPromptContent } from "@vegamo/deepcode-c
 import { IpcEvent, IpcRequest } from "../shared/ipc.js";
 import type { EditableSettings, UndoRestoreMode } from "../shared/ipc.js";
 import { SessionBridge } from "./session-bridge.js";
+import { PluginManager, type PluginEventCallback } from "./plugin-manager.js";
+import { scanFiles } from "./file-scanner.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,6 +26,7 @@ try {
 
 let mainWindow: BrowserWindow | null = null;
 let bridge: SessionBridge | null = null;
+let pluginManager: PluginManager | null = null;
 
 function emit(channel: string, payload?: unknown): void {
   mainWindow?.webContents.send(channel, payload);
@@ -36,19 +39,42 @@ function getBridge(): SessionBridge {
   return bridge;
 }
 
+function getPluginManager(): PluginManager {
+  if (!pluginManager) {
+    const b = getBridge();
+    pluginManager = new PluginManager(
+      () => b.getSessionManager(),
+      () => {
+        // De-typed access to resolveCurrentSettings via the bridge's own method
+        const settings = b.getRawSettings();
+        return {
+          mcpServers: settings.mcpServers,
+          enabledSkills: settings.enabledSkills,
+        };
+      }
+    );
+    const onEvent: PluginEventCallback = (event) => {
+      emit(IpcEvent.PluginEvent, event);
+    };
+    pluginManager.setOnEvent(onEvent);
+    void pluginManager.initialize();
+  }
+  return pluginManager;
+}
+
 function createWindow(): void {
+  const isWin = process.platform === "win32";
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 820,
     minWidth: 720,
     minHeight: 480,
-    backgroundColor: "#e7ecf2",
+    backgroundColor: isWin ? "#1d1d1d" : "#e7ecf2",
     title: "Deep Code",
     autoHideMenuBar: true,
-    // Frameless so the renderer can draw the period-correct Aqua title bar with
-    // its own gumdrop (traffic-light) window controls in the top-left.
+    // frame:false 已隐藏原生标题栏和红绿灯(macOS)/标题栏(Windows)。
+    // 不再设置 titleBarStyle — 它会导致 macOS 原生 traffic lights 仍然显示。
     frame: false,
-    titleBarStyle: "hidden",
     webPreferences: {
       preload: join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -73,7 +99,10 @@ function registerIpc(): void {
     ipcMain.handle(channel, (_event, ...args) => fn(...(args as never[])));
   };
 
-  handle(IpcRequest.Ready, () => ({ projectRoot: getBridge().projectRoot }));
+  handle(IpcRequest.Ready, () => ({
+    projectRoot: getBridge().projectRoot,
+    platform: process.platform,
+  }));
   handle(IpcRequest.GetProjectRoot, () => getBridge().projectRoot);
 
   handle(IpcRequest.WindowMinimize, () => {
@@ -132,14 +161,14 @@ function registerIpc(): void {
   handle(IpcRequest.PromptInterrupt, () => getBridge().interrupt());
   handle(IpcRequest.PermissionDeny, (reason?: string) => getBridge().denyPermission(reason));
 
-  handle(IpcRequest.SkillsList, (sessionId?: string) => getBridge().listSkills(sessionId));
+  handle(IpcRequest.SkillsList, (sessionId?: string) => getPluginManager().listSkills(sessionId));
   handle(IpcRequest.SettingsGet, () => getBridge().getSettings());
   handle(IpcRequest.SettingsGetEditable, () => getBridge().getEditableSettings());
   handle(IpcRequest.SettingsUpdate, (patch: EditableSettings) => getBridge().updateSettings(patch));
   handle(IpcRequest.ModelSet, (selection: ModelConfigSelection) => getBridge().setModel(selection));
 
-  handle(IpcRequest.McpStatus, () => getBridge().mcpStatus());
-  handle(IpcRequest.McpReconnect, (name: string) => getBridge().mcpReconnect(name));
+  handle(IpcRequest.McpStatus, () => getPluginManager().getMcpStatus());
+  handle(IpcRequest.McpReconnect, (name: string) => getPluginManager().reconnectMcp(name));
 
   handle(IpcRequest.UndoList, (sessionId: string) => getBridge().listUndoTargets(sessionId));
   handle(IpcRequest.UndoRestore, (sessionId: string, messageId: string, mode: UndoRestoreMode) => {
@@ -149,6 +178,27 @@ function registerIpc(): void {
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : String(error) };
     }
+  });
+
+  // ── Plugin IPC handlers ───────────────────────────────────────────────────
+  handle(IpcRequest.PluginSearchSkills, (query: string, sessionId?: string) =>
+    getPluginManager().searchSkills(query, sessionId)
+  );
+  handle(IpcRequest.PluginRefreshSkills, (sessionId?: string) => getPluginManager().refreshSkills(sessionId));
+  handle(
+    IpcRequest.PluginUpsertMcpServer,
+    async (name: string, command: string, args?: string[], env?: Record<string, string>) => {
+      const config = { command, args, env };
+      await getPluginManager().upsertMcpServer(name, config);
+    }
+  );
+  handle(IpcRequest.PluginRemoveMcpServer, async (name: string) => {
+    await getPluginManager().removeMcpServer(name);
+  });
+
+  // ── File scanner (for @file mentions) ────────────────────────────────────
+  handle(IpcRequest.ScanFiles, (query: string) => {
+    return scanFiles(getBridge().projectRoot, query);
   });
 }
 
@@ -166,6 +216,8 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   bridge?.dispose();
   bridge = null;
+  pluginManager?.dispose();
+  pluginManager = null;
   if (process.platform !== "darwin") {
     app.quit();
   }

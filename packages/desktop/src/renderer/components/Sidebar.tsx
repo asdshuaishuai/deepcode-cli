@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useMemo, useState, type JSX } from "react";
 import type { SerializableSessionEntry } from "../../shared/ipc";
 import { useI18n, type MessageKey, type Translate } from "../i18n";
 
@@ -40,10 +40,44 @@ function relativeTime(iso: string, t: Translate): string {
   return t("time.daysAgo", { n: Math.floor(hours / 24) });
 }
 
+function highlightText(text: string, query: string): JSX.Element {
+  if (!query.trim()) return <>{text}</>;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark
+            key={i}
+            style={{ background: "var(--yellow)", color: "var(--text)", borderRadius: 3, padding: "0 2px" }}
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 export function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, onRename }: Props): JSX.Element {
   const { t } = useI18n();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery.trim()) return sessions;
+    const q = searchQuery.toLowerCase();
+    return sessions.filter(
+      (s) =>
+        (s.summary ?? "").toLowerCase().includes(q) ||
+        s.id.toLowerCase().includes(q) ||
+        s.status.toLowerCase().includes(q)
+    );
+  }, [sessions, searchQuery]);
 
   function beginRename(entry: SerializableSessionEntry): void {
     setEditingId(entry.id);
@@ -62,15 +96,28 @@ export function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, onRenam
     <div className="sidebar">
       <div className="sidebar-head">
         <span>{t("sidebar.sessions")}</span>
-        <button className="btn-new" onClick={onNew}>
+        <button className="btn-new gel" onClick={onNew}>
           {t("sidebar.new")}
         </button>
       </div>
+
+      {/* Search input */}
+      <div className="sidebar-search">
+        <input
+          type="text"
+          placeholder={t("sidebar.search") || "Search sessions…"}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
       <div className="session-list">
-        {sessions.length === 0 ? (
-          <div style={{ padding: "8px 10px", color: "var(--text-faint)", fontSize: 12 }}>{t("sidebar.none")}</div>
+        {filteredSessions.length === 0 ? (
+          <div style={{ padding: "8px 10px", color: "var(--text-faint)", fontSize: 12 }}>
+            {searchQuery ? t("sidebar.noResults") || "No matching sessions." : t("sidebar.none")}
+          </div>
         ) : null}
-        {sessions.map((entry) => (
+        {filteredSessions.map((entry) => (
           <div
             key={entry.id}
             className={`session-item${entry.id === activeId ? " active" : ""}`}
@@ -99,7 +146,11 @@ export function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, onRenam
                 }}
               />
             ) : (
-              <div className="session-title">{entry.summary || t("sidebar.untitled")}</div>
+              <div className="session-title">
+                {searchQuery
+                  ? highlightText(entry.summary || t("sidebar.untitled"), searchQuery)
+                  : entry.summary || t("sidebar.untitled")}
+              </div>
             )}
             <div className="session-meta">
               <span className={`status-dot ${entry.status}`} />
