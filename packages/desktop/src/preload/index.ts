@@ -32,6 +32,7 @@ const api: DesktopApi = {
   sendPrompt: (prompt) => ipcRenderer.invoke(IpcRequest.PromptSend, prompt),
   interrupt: () => ipcRenderer.invoke(IpcRequest.PromptInterrupt),
   denyPermission: (reason) => ipcRenderer.invoke(IpcRequest.PermissionDeny, reason),
+  adjustBashTimeout: (deltaMs) => ipcRenderer.invoke(IpcRequest.AdjustBashTimeout, deltaMs),
 
   listSkills: (sessionId) => ipcRenderer.invoke(IpcRequest.SkillsList, sessionId),
   getSettings: () => ipcRenderer.invoke(IpcRequest.SettingsGet),

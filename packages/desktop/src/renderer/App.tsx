@@ -5,6 +5,7 @@ import type {
   EditableSettings,
   McpServerStatus,
   ModelConfigSelection,
+  SerializableProcess,
   SerializableSessionEntry,
   SessionMessage,
   SettingsSummary,
@@ -29,6 +30,7 @@ import { TokenStatsPanel } from "./components/TokenStatsPanel";
 import { IndexLibraryPanel } from "./components/IndexLibraryPanel";
 import { DiffOverlay, type DiffTarget } from "./components/DiffOverlay";
 import { UndoModal } from "./components/UndoModal";
+import { ProcessOutputPanel, accumulateStdout } from "./components/ProcessOutputPanel";
 import { aggregateUsage } from "./lib/token-usage";
 import { buildToolSummary, getPlanLines } from "./lib/messages";
 import type { PermissionResult } from "./lib/permissions";
@@ -105,6 +107,8 @@ export function App(): JSX.Element {
   const [planMode, setPlanMode] = useState(false);
   const [statusLine, setStatusLine] = useState<string | null>(null);
   const [errorLine, setErrorLine] = useState<string | null>(null);
+  const [streamProgress, setStreamProgress] = useState<{ startedAt: string; formattedTokens: string } | null>(null);
+  const [nowTick, setNowTick] = useState(0);
 
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
   const [askPermissions, setAskPermissions] = useState<AskPermissionRequest[] | undefined>(undefined);
@@ -118,7 +122,9 @@ export function App(): JSX.Element {
 
   const [mainView, setMainView] = useState<"chat" | "settings" | "plugins">("chat");
   const [selectedPlugin, setSelectedPlugin] = useState<PluginSelection | null>(null);
-  const [sidebarView, setSidebarView] = useState<"explorer" | "scm" | "tasks" | "tokens" | "plugins">("explorer");
+  const [sidebarView, setSidebarView] = useState<"explorer" | "scm" | "tasks" | "tokens" | "index" | "plugins">(
+    "explorer"
+  );
   const [treeRefreshKey, setTreeRefreshKey] = useState(0);
   const [diffTarget, setDiffTarget] = useState<DiffTarget | null>(null);
   const [branch, setBranch] = useState("");
@@ -130,6 +136,9 @@ export function App(): JSX.Element {
 
   const [panelOpen, setPanelOpen] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [showProcessPanel, setShowProcessPanel] = useState(false);
+  const [runningProcesses, setRunningProcesses] = useState<SerializableProcess[]>([]);
+  const processStdoutRef = useRef<Map<number, string>>(new Map());
 
   const activeIdRef = useRef<string | null>(null);
   activeIdRef.current = activeId;
@@ -140,7 +149,7 @@ export function App(): JSX.Element {
   const bumpTree = useCallback(() => setTreeRefreshKey((k) => k + 1), []);
   // VSCode-style activity bar: selecting a rail view swaps the left panel while
   // the main area stays put. Re-selecting the active view toggles the panel.
-  const selectView = useCallback((view: "explorer" | "scm" | "tasks" | "tokens" | "plugins") => {
+  const selectView = useCallback((view: "explorer" | "scm" | "tasks" | "tokens" | "index" | "plugins") => {
     setSidebarView((prev) => {
       if (prev === view) {
         setPanelOpen((wasOpen) => !wasOpen);
@@ -239,9 +248,30 @@ export function App(): JSX.Element {
       if (entry.id === activeIdRef.current) {
         setActiveStatus(entry.status);
         setAskPermissions(entry.askPermissions);
+        setRunningProcesses(entry.processes ?? []);
       }
       bumpTree();
     });
+
+    const offProcessStdout = api.onProcessStdout((event) => {
+      accumulateStdout(processStdoutRef.current, event.pid, event.chunk);
+    });
+
+    const offStreamProgress = api.onLlmStreamProgress((progress) => {
+      const p = progress as { phase?: string; startedAt?: string; formattedTokens?: string };
+      if (p.phase === "end") {
+        setStreamProgress(null);
+        return;
+      }
+      if (p.startedAt) {
+        setStreamProgress({ startedAt: p.startedAt, formattedTokens: p.formattedTokens ?? "0" });
+      }
+    });
+
+    // Periodic tick for loading animation (500ms)
+    const tickTimer = setInterval(() => {
+      setNowTick((v) => v + 1);
+    }, 500);
 
     const offMcp = api.onMcpStatusChanged(() => void refreshMcp());
     const offRoot = api.onProjectRootChanged((root) => {
@@ -259,8 +289,11 @@ export function App(): JSX.Element {
       disposed = true;
       offMessage();
       offEntry();
+      offProcessStdout();
+      offStreamProgress();
       offMcp();
       offRoot();
+      clearInterval(tickTimer);
     };
   }, [bumpTree, loadSession, refreshGit, refreshMcp, refreshSessions, refreshSettings, refreshSkills]);
 
@@ -314,6 +347,7 @@ export function App(): JSX.Element {
         setErrorLine(error instanceof Error ? error.message : String(error));
       } finally {
         setBusy(false);
+        setStreamProgress(null);
       }
     },
     [pendingPermissionReply, refreshSessions, refreshSkills, t]
@@ -549,12 +583,16 @@ export function App(): JSX.Element {
   );
   const handleOpenDiff = useCallback((target: DiffTarget) => setDiffTarget(target), []);
 
-  // ── ⌘K command palette ───────────────────────────────────────────────────────
+  // ── ⌘K command palette + Ctrl+O process panel ────────────────────────────────
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
         setPaletteOpen((v) => !v);
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "o" || e.key === "O")) {
+        e.preventDefault();
+        setShowProcessPanel((v) => !v);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -611,6 +649,37 @@ export function App(): JSX.Element {
     !busy;
   const showPlan = Boolean(pendingPlan) && !busy;
   const hasPlan = useMemo(() => findLatestPlan(messages) !== null, [messages]);
+
+  // Build loading text from stream progress + running processes (ported from CLI buildLoadingText).
+  const loadingText = useMemo(() => {
+    if (!busy) return null;
+    // nowTick forces periodic recalculation for elapsed time display
+    void nowTick;
+    // Show running process info if any
+    if (runningProcesses.length > 0) {
+      const proc = runningProcesses[0];
+      const elapsed = proc ? Math.max(0, Date.now() - new Date(proc.startTime).getTime()) : 0;
+      const secs = Math.floor(elapsed / 1000);
+      const mins = Math.floor(secs / 60);
+      const s = secs % 60;
+      const elapsedStr = mins > 0 ? `${mins}m${s}s` : `${secs}s`;
+      return `(${elapsedStr}) ${proc?.command ?? ""}`;
+    }
+    if (!streamProgress) return t("composer.thinking");
+    const startedAt = Date.parse(streamProgress.startedAt);
+    if (Number.isNaN(startedAt)) return t("composer.thinking");
+    const elapsedMs = Math.max(0, Date.now() - startedAt);
+    if (elapsedMs < 3000) return t("composer.thinking");
+    const elapsedSeconds = Math.floor(elapsedMs / 1000);
+    return `${t("composer.thinking")} (${elapsedSeconds}s) · \u2193 ${streamProgress.formattedTokens} tokens`;
+  }, [busy, streamProgress, runningProcesses, nowTick, t]);
+
+  // Auto-show process panel when processes start running.
+  useEffect(() => {
+    if (runningProcesses.length > 0 && busy) {
+      setShowProcessPanel(true);
+    }
+  }, [runningProcesses, busy]);
 
   const footer = showQuestion ? (
     <QuestionCard
@@ -694,6 +763,14 @@ export function App(): JSX.Element {
         >
           ▦
         </RailButton>
+        <RailButton
+          active={panelOpen && sidebarView === "index"}
+          title={t("rail.index")}
+          aria-label={t("rail.index")}
+          onClick={() => selectView("index")}
+        >
+          ⚙
+        </RailButton>
         <RailSpacer />
         <RailButton title={reasoningTitle} aria-label={reasoningTitle} onClick={handleCycleReasoning}>
           {reasoningIcon}
@@ -740,10 +817,9 @@ export function App(): JSX.Element {
       ) : sidebarView === "tasks" ? (
         <TaskPanel messages={messages} />
       ) : sidebarView === "tokens" ? (
-        <div className="ui-side-panel ui-token-view">
-          <TokenStatsPanel sessions={sessions} />
-          <IndexLibraryPanel />
-        </div>
+        <TokenStatsPanel sessions={sessions} />
+      ) : sidebarView === "index" ? (
+        <IndexLibraryPanel />
       ) : (
         <PluginMcpPanel
           skills={skills}
@@ -816,6 +892,13 @@ export function App(): JSX.Element {
               }}
               footer={footer}
             />
+            {showProcessPanel ? (
+              <ProcessOutputPanel
+                processes={runningProcesses}
+                stdoutRef={processStdoutRef}
+                onDismiss={() => setShowProcessPanel(false)}
+              />
+            ) : null}
             <div className="ui-composer-dock">
               <Composer
                 value={draft}
@@ -831,10 +914,11 @@ export function App(): JSX.Element {
                 onToggleSkill={(name) =>
                   setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
                 }
-                statusText={statusLine}
+                statusText={loadingText ?? statusLine}
                 errorText={errorLine}
                 imageUrls={imageUrls}
                 onRemoveImage={(i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                onAddImage={(dataUrl) => setImageUrls((prev) => [...prev, dataUrl])}
                 onSlashCommand={(cmd) => {
                   if (cmd === "new") {
                     handleNewSession();
@@ -856,6 +940,10 @@ export function App(): JSX.Element {
                     handleCycleReasoning();
                   } else if (cmd === "continue") {
                     handleSend();
+                  } else if (cmd === "resume") {
+                    selectView("explorer");
+                  } else if (cmd === "exit") {
+                    void api.closeWindow();
                   }
                 }}
               />

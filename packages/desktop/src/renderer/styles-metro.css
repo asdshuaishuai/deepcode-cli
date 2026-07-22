@@ -107,7 +107,92 @@
   backdrop-filter: blur(20px);
 }
 
-/* 窗口最大化控件保持直角(Metro 不用 gumdrop)。 */
+/* 窗口控件组(Metro 扁平磁贴风):凹陷背景 + 直角按钮。 */
+.ui-window-controls.win {
+  background: var(--metro-bg-recessed);
+  border-color: var(--ui-border-soft);
+  border-radius: var(--ui-radius-sm);
+}
 .ui-win-ctrl {
   border-radius: 0;
+  color: var(--ui-text-faint);
+}
+.ui-win-ctrl:hover {
+  background: var(--metro-blue);
+  color: #fff;
+}
+.ui-win-ctrl.close:hover {
+  background: var(--metro-red);
+}
+
+/* Process output panel (Metro 扁平深色风格) */
+.ui-process-panel {
+  background: var(--metro-bg-recessed);
+  border-color: var(--metro-bg-tile);
+}
+.ui-process-panel-head {
+  background: var(--metro-bg-tile);
+  border-color: var(--metro-bg-tile);
+}
+.ui-process-btn {
+  border-radius: 0;
+}
+.ui-process-btn:hover {
+  background: var(--metro-blue);
+  color: #fff;
+}
+.ui-process-btn-close:hover {
+  background: var(--metro-red);
+}
+
+/* ── Message bubbles (Metro 扁平深色) ─────────────────────────────────────── */
+.ui-bubble.user {
+  background: var(--metro-blue);
+  border-radius: 2px;
+  border-bottom-right-radius: 2px;
+}
+.ui-bubble.assistant {
+  background: var(--metro-bg-tile);
+  border-color: var(--metro-bg-tile);
+  border-radius: 2px;
+  border-bottom-left-radius: 2px;
+}
+.ui-bubble.thinking {
+  background: var(--metro-bg-recessed);
+  border-color: var(--metro-bg-tile);
+  border-radius: 2px;
+}
+.ui-tool-card {
+  background: var(--metro-bg-tile);
+  border-color: var(--metro-bg-tile);
+  border-radius: 2px;
+}
+.ui-tool-card.bash {
+  border-left-color: var(--metro-blue);
+}
+.ui-tool-card.mcp {
+  border-left-color: var(--metro-accent);
+}
+.ui-system-note {
+  background: var(--metro-bg-recessed);
+  border-radius: 2px;
+}
+.ui-diff {
+  border-color: var(--metro-bg-tile);
+  border-radius: 2px;
+}
+.ui-tool-plan {
+  border-color: var(--metro-bg-tile);
+  border-radius: 2px;
+}
+.ui-tool-plan-label {
+  background: var(--metro-bg-recessed);
+}
+.ui-md pre {
+  background: var(--metro-bg-recessed);
+  border-color: var(--metro-bg-tile);
+  border-radius: 2px;
+}
+.ui-md code {
+  background: var(--metro-bg-recessed);
 }

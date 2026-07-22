@@ -1,6 +1,7 @@
-import { useEffect, useRef, type JSX } from "react";
+import { useEffect, useMemo, useRef, type JSX } from "react";
 import type { SessionMessage } from "../../shared/ipc";
 import type { ReasoningMode } from "../lib/appearance";
+import { findExpandedThinkingId } from "../lib/messages";
 import { Message } from "./Message";
 import { useI18n } from "../i18n";
 
@@ -18,6 +19,7 @@ type Props = {
 export function MessageList({ messages, hasActiveSession, reasoningMode, onQuickAction, footer }: Props): JSX.Element {
   const { t } = useI18n();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const expandedThinkingId = useMemo(() => findExpandedThinkingId(messages), [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -67,7 +69,12 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
           </div>
         ) : null}
         {messages.map((message) => (
-          <Message key={message.id} message={message} reasoningMode={reasoningMode} />
+          <Message
+            key={message.id}
+            message={message}
+            reasoningMode={reasoningMode}
+            expandedThinkingId={expandedThinkingId}
+          />
         ))}
         {footer}
         <div ref={bottomRef} />

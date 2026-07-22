@@ -9,8 +9,8 @@ import {
   setShellIfWindows,
   configureCodegraphVendorRoot,
   hasCodegraphProject,
-  runCodegraphInit,
-  runCodegraphSync,
+  runCodegraphInitAsync,
+  runCodegraphSyncAsync,
 } from "@vegamo/deepcode-core";
 import type { ModelConfigSelection, UserPromptContent } from "@vegamo/deepcode-core";
 import { IpcEvent, IpcRequest } from "../shared/ipc.js";
@@ -193,6 +193,7 @@ function registerIpc(): void {
   });
   handle(IpcRequest.PromptInterrupt, () => getBridge().interrupt());
   handle(IpcRequest.PermissionDeny, (reason?: string) => getBridge().denyPermission(reason));
+  handle(IpcRequest.AdjustBashTimeout, (deltaMs: number) => getBridge().adjustBashTimeout(deltaMs));
 
   handle(IpcRequest.SkillsList, (sessionId?: string) => getPluginManager().listSkills(sessionId));
   handle(IpcRequest.SettingsGet, () => getBridge().getSettings());
@@ -261,13 +262,13 @@ function registerIpc(): void {
       initialized: hasCodegraphProject(w.root),
     }));
   });
-  handle(IpcRequest.CodegraphReindex, (root: string) => {
+  handle(IpcRequest.CodegraphReindex, async (root: string) => {
     const initialized = hasCodegraphProject(root);
     if (initialized) {
-      runCodegraphSync(root);
+      await runCodegraphSyncAsync(root);
       return { ok: true, action: "index" as const };
     }
-    runCodegraphInit(root);
+    await runCodegraphInitAsync(root);
     return { ok: true, action: "init" as const };
   });
 

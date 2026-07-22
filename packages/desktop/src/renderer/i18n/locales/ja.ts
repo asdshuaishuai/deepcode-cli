@@ -66,6 +66,7 @@ export const ja: Record<MessageKey, string> = {
   "composer.planHint": "プラン要求を入力 · Shift+Tab で切り替え",
   "composer.removeSkill": "スキルを削除",
   "composer.hint": "Enter で送信 · Shift+Enter で改行",
+  "composer.thinking": "考え中\u2026",
 
   // ── Empty states ──────────────────────────────────────────
   "empty.subtitle": "会話を開始して、コードベースを構築・リファクタリング・探索しましょう。",
@@ -174,6 +175,14 @@ export const ja: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "リクエストに失敗しました。",
   "app.permissionDenied": "許可が拒否されました。下に返信を追加し、Enter を押して続行してください。",
+
+  // ── Process output panel ─────────────────────────────────
+  "process.title": "プロセス出力",
+  "process.timeout": "タイムアウト",
+  "process.noTimeout": "タイムアウトなし",
+  "process.running": "実行中",
+  "process.timeoutSet": "タイムアウト設定",
+  "process.noAdjustable": "調整可能な Bash タイムアウトがありません",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "設定",

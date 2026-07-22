@@ -71,7 +71,8 @@ export const en = {
   "composer.planPlaceholder": "Describe the plan…",
   "composer.planHint": "Type a plan request · Shift+Tab to toggle",
   "composer.removeSkill": "Remove skill",
-  "composer.hint": "Enter to send · Shift+Enter for newline",
+  "composer.hint": "Enter to send \u00b7 Shift+Enter for newline",
+  "composer.thinking": "Thinking\u2026",
 
   // ── Empty states ──────────────────────────────────────────
   "empty.subtitle": "Start a conversation to build, refactor, or explore your codebase.",
@@ -180,6 +181,14 @@ export const en = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "Request failed.",
   "app.permissionDenied": "Permission denied. Add a reply below, then press Enter to continue.",
+
+  // ── Process output panel ─────────────────────────────────
+  "process.title": "Process Output",
+  "process.timeout": "timeout",
+  "process.noTimeout": "no timeout",
+  "process.running": "running",
+  "process.timeoutSet": "Timeout set to",
+  "process.noAdjustable": "No adjustable Bash timeout",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "Settings",
@@ -469,7 +478,8 @@ export const zh: Record<MessageKey, string> = {
   "composer.planPlaceholder": "描述计划…",
   "composer.planHint": "输入计划请求 · Shift+Tab 切换",
   "composer.removeSkill": "移除技能",
-  "composer.hint": "回车发送 · Shift+回车换行",
+  "composer.hint": "回车发送 \u00b7 Shift+回车换行",
+  "composer.thinking": "思考中\u2026",
 
   // ── Empty states ──────────────────────────────────────────
   "empty.subtitle": "开始对话，构建、重构或探索你的代码库。",
@@ -578,6 +588,14 @@ export const zh: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "请求失败。",
   "app.permissionDenied": "已拒绝授权。请在下方补充说明后按回车继续。",
+
+  // ── Process output panel ─────────────────────────────────
+  "process.title": "进程输出",
+  "process.timeout": "超时",
+  "process.noTimeout": "无超时",
+  "process.running": "运行中",
+  "process.timeoutSet": "超时已设为",
+  "process.noAdjustable": "无可调整的 Bash 超时",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "设置",

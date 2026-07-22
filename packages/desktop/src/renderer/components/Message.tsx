@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import type { SessionMessage } from "../../shared/ipc";
 import type { ReasoningMode } from "../lib/appearance";
 import { renderMarkdown } from "../markdown";
@@ -17,129 +17,214 @@ function Md({ text }: { text: string }): JSX.Element {
   return <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
 }
 
+/** Map tool name → icon + CSS modifier for visual differentiation. */
+function toolVisual(name: string): { icon: string; cls: string } {
+  const n = name.toLowerCase();
+  if (n === "bash") return { icon: "$", cls: "bash" };
+  if (n === "read") return { icon: "📖", cls: "read" };
+  if (n === "write") return { icon: "📝", cls: "write" };
+  if (n === "edit") return { icon: "✏️", cls: "edit" };
+  if (n === "askuserquestion") return { icon: "❓", cls: "ask" };
+  if (n === "updateplan") return { icon: "📋", cls: "plan" };
+  if (n === "websearch") return { icon: "🔍", cls: "search" };
+  if (n.startsWith("mcp__")) return { icon: "🔌", cls: "mcp" };
+  return { icon: "⚙", cls: "generic" };
+}
+
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max)}…`;
+}
+
+// ── User bubble (QQ-style: right-aligned) ─────────────────────────────────────
+function UserBubble({ message }: { message: SessionMessage }): JSX.Element {
+  const { t } = useI18n();
+  const attachments = Array.isArray(message.contentParams) ? message.contentParams.length : 0;
+  return (
+    <div className="ui-bubble-row user">
+      <div className="ui-bubble user">
+        <span style={{ whiteSpace: "pre-wrap" }}>{message.content || t("msg.noContent")}</span>
+        {attachments > 0 ? <span className="ui-bubble-attach">📎 {attachments}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+// ── Thinking block (collapsible) ──────────────────────────────────────────────
+function ThinkingBlock({
+  content,
+  messageParams,
+  reasoningMode,
+  isLatest,
+}: {
+  content: string;
+  messageParams: unknown;
+  reasoningMode: ReasoningMode;
+  isLatest: boolean;
+}): JSX.Element | null {
+  const { t } = useI18n();
+  const summary = buildThinkingSummary(content, messageParams);
+  // Auto-expand the latest thinking block; older ones auto-collapse.
+  const [expanded, setExpanded] = useState(reasoningMode === "expanded" || isLatest);
+
+  // Sync when a newer thinking block arrives (isLatest changes).
+  useEffect(() => {
+    if (isLatest && reasoningMode !== "hidden") {
+      setExpanded(true);
+    } else if (!isLatest) {
+      setExpanded(false);
+    }
+  }, [isLatest, reasoningMode]);
+
+  if (reasoningMode === "hidden") return null;
+
+  return (
+    <div className="ui-bubble-row assistant">
+      <div className="ui-bubble thinking">
+        <button className="ui-thinking-toggle" onClick={() => setExpanded((v) => !v)}>
+          <span className="ui-thinking-icon">{expanded ? "🧠" : "💭"}</span>
+          <span className="ui-thinking-label">{t("msg.thinking")}</span>
+          <span className="ui-thinking-summary">{truncate(summary || t("msg.reasoning"), 80)}</span>
+          <span className="ui-thinking-chevron">{expanded ? "▾" : "▸"}</span>
+        </button>
+        {expanded && content ? (
+          <div className="ui-thinking-body">
+            <Md text={content} />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ── Assistant bubble ──────────────────────────────────────────────────────────
+function AssistantBubble({ message }: { message: SessionMessage }): JSX.Element {
+  const content = (message.content || "").trim();
+  return (
+    <div className="ui-bubble-row assistant">
+      <div className="ui-bubble assistant">{content ? <Md text={content} /> : null}</div>
+    </div>
+  );
+}
+
+// ── Tool card (differentiated by tool type) ───────────────────────────────────
+function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
+  const { t } = useI18n();
+  const summary = buildToolSummary(message);
+  const params = formatToolParams(summary);
+  const resultMd = getResultMd(message);
+  const diffLines = getDiffLines(summary);
+  const planLines = getPlanLines(summary);
+  const vis = toolVisual(summary.name);
+  const isMcp = summary.name.toLowerCase().startsWith("mcp__");
+  const displayName = isMcp ? summary.name.replace(/^mcp__/, "").replace(/__/g, " · ") : formatStatusName(summary.name);
+  const [resultOpen, setResultOpen] = useState(false);
+
+  return (
+    <div className={`ui-tool-card ${vis.cls}${summary.ok ? "" : " err"}`}>
+      {/* Header: icon + name + params */}
+      <div className="ui-tool-head">
+        <span className="ui-tool-icon">{vis.icon}</span>
+        <span className="ui-tool-name">{displayName}</span>
+        {summary.ok ? null : <span className="ui-tool-badge err">✗</span>}
+      </div>
+      {/* Params (one-liner) */}
+      {params ? <div className="ui-tool-params">{params}</div> : null}
+      {/* Diff preview for edit/write */}
+      {diffLines.length > 0 ? (
+        <div className="ui-diff">
+          {diffLines.map((line, i) => (
+            <div key={i} className={line.kind === "added" ? "add" : line.kind === "removed" ? "del" : "ctx"}>
+              {line.marker}
+              {line.content}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {/* Plan lines for UpdatePlan */}
+      {planLines.length > 0 ? (
+        <div className="ui-tool-plan">
+          <div className="ui-tool-plan-label">📋 {t("msg.plan")}</div>
+          <div className="ui-tool-plan-body">{planLines.join("\n")}</div>
+        </div>
+      ) : null}
+      {/* Collapsible result */}
+      {resultMd ? (
+        <div className="ui-tool-result-wrap">
+          <button className="ui-tool-result-toggle" onClick={() => setResultOpen((v) => !v)}>
+            <span>{resultOpen ? "▾" : "▸"}</span>
+            <span>{t("msg.result")}</span>
+            {!resultOpen ? (
+              <span className="ui-tool-result-hint"> ({truncate(resultMd.replace(/\s+/g, " "), 60)})</span>
+            ) : null}
+          </button>
+          {resultOpen ? (
+            <div className="ui-tool-result">
+              <Md text={resultMd} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ── System note (centered, muted) ─────────────────────────────────────────────
+function SystemNote({ children }: { children: React.ReactNode }): JSX.Element {
+  return (
+    <div className="ui-bubble-row system">
+      <div className="ui-system-note">{children}</div>
+    </div>
+  );
+}
+
+// ── Main Message dispatcher ───────────────────────────────────────────────────
 export function Message({
   message,
   reasoningMode = "normal",
+  expandedThinkingId,
 }: {
   message: SessionMessage;
   reasoningMode?: ReasoningMode;
+  expandedThinkingId?: string | null;
 }): JSX.Element | null {
   const { t } = useI18n();
-  if (!message.visible) {
-    return null;
-  }
+  if (!message.visible) return null;
 
   if (message.role === "user") {
-    const attachments = Array.isArray(message.contentParams) ? message.contentParams.length : 0;
-    return (
-      <div className="ui-msg user">
-        <div className="ui-msg-gutter">›</div>
-        <div className="ui-msg-body">
-          <span style={{ whiteSpace: "pre-wrap" }}>{message.content || t("msg.noContent")}</span>
-          {attachments > 0 ? <span> 📎 {t("msg.images", { n: attachments })}</span> : null}
-        </div>
-      </div>
-    );
+    return <UserBubble message={message} />;
   }
 
   if (message.role === "assistant") {
-    const content = (message.content || "").trim();
     if (message.meta?.asThinking) {
-      if (reasoningMode === "hidden") {
-        return null;
-      }
-      const summary = buildThinkingSummary(content, message.messageParams);
       return (
-        <div className="ui-msg assistant">
-          <div className="ui-msg-gutter">✧</div>
-          <div className="ui-msg-body">
-            <details className="ui-thinking" open={reasoningMode === "expanded"}>
-              <summary>
-                {t("msg.thinking")} — {summary || t("msg.reasoning")}
-              </summary>
-              {content ? <Md text={content} /> : null}
-            </details>
-          </div>
-        </div>
+        <ThinkingBlock
+          content={(message.content || "").trim()}
+          messageParams={message.messageParams}
+          reasoningMode={reasoningMode}
+          isLatest={message.id === expandedThinkingId}
+        />
       );
     }
-    return (
-      <div className="ui-msg assistant">
-        <div className="ui-msg-gutter">✦</div>
-        <div className="ui-msg-body">{content ? <Md text={content} /> : null}</div>
-      </div>
-    );
+    return <AssistantBubble message={message} />;
   }
 
   if (message.role === "tool") {
-    const summary = buildToolSummary(message);
-    const params = formatToolParams(summary);
-    const resultMd = getResultMd(message);
-    const diffLines = getDiffLines(summary);
-    const planLines = getPlanLines(summary);
     return (
-      <div className={`ui-msg tool${summary.ok ? "" : " err"}`}>
-        <div className="ui-msg-gutter">✧</div>
-        <div className="ui-msg-body">
-          <div className="ui-tool-line">
-            <span className="ui-tool-name">{formatStatusName(summary.name)}</span>
-            {params ? <span className="ui-tool-params">{params}</span> : null}
-          </div>
-          {diffLines.length > 0 ? (
-            <div className="ui-diff">
-              {diffLines.map((line, i) => (
-                <div key={i} className={line.kind === "added" ? "add" : line.kind === "removed" ? "del" : "ctx"}>
-                  {line.marker}
-                  {line.content}
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {planLines.length > 0 ? (
-            <div className="ui-tool-result">
-              <div className="label">└ {t("msg.plan")}</div>
-              <div style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{planLines.join("\n")}</div>
-            </div>
-          ) : null}
-          {resultMd ? (
-            <details className="ui-tool-result" open={resultMd.length < 400}>
-              <summary className="label">└ {t("msg.result")}</summary>
-              <Md text={resultMd} />
-            </details>
-          ) : null}
-        </div>
+      <div className="ui-bubble-row tool">
+        <ToolCard message={message} />
       </div>
     );
   }
 
   if (message.role === "system") {
     if (message.meta?.isModelChange) {
-      return (
-        <div className="ui-msg user">
-          <div className="ui-msg-gutter">›</div>
-          <div className="ui-msg-body" style={{ whiteSpace: "pre-wrap" }}>
-            {message.content || ""}
-          </div>
-        </div>
-      );
+      return <SystemNote>{message.content || ""}</SystemNote>;
     }
     if (message.meta?.skill) {
-      return (
-        <div className="ui-msg">
-          <div className="ui-msg-gutter" />
-          <div className="ui-msg-body ui-system-note">⚡ {t("msg.loadedSkill", { name: message.meta.skill.name })}</div>
-        </div>
-      );
+      return <SystemNote>⚡ {t("msg.loadedSkill", { name: message.meta.skill.name })}</SystemNote>;
     }
     if (message.meta?.isSummary) {
-      return (
-        <div className="ui-msg">
-          <div className="ui-msg-gutter" />
-          <div className="ui-msg-body ui-system-note" style={{ fontStyle: "italic" }}>
-            {t("msg.summaryInserted")}
-          </div>
-        </div>
-      );
+      return <SystemNote>📄 {t("msg.summaryInserted")}</SystemNote>;
     }
     return null;
   }

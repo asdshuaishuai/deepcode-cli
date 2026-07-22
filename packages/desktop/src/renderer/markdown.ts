@@ -1,4 +1,4 @@
-import { marked, type Tokens } from "marked";
+import { marked, type Tokens, type RendererObject } from "marked";
 
 /** Pretty-print fenced ```json blocks so model output reads cleanly. */
 function prettyPrintJsonBlocks(token: Tokens.Generic): void {
@@ -13,14 +13,27 @@ function prettyPrintJsonBlocks(token: Tokens.Generic): void {
   }
 }
 
+/**
+ * Custom renderer: adds `data-lang` attribute and language-specific CSS class
+ * to fenced code blocks so the UI can show a language label and apply
+ * specialised styling (e.g. JSON amber border, HTML purple border).
+ */
+const customRenderer: RendererObject = {
+  code({ text, lang: rawLang }: Tokens.Code): string {
+    const lang = (rawLang ?? "").trim().toLowerCase();
+    const langClass = lang ? ` code-${lang}` : "";
+    const dataLang = lang ? ` data-lang="${lang}"` : "";
+    const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return `<pre class="code-block${langClass}"${dataLang}><code class="language-${lang || "text"}">${escaped}</code></pre>\n`;
+  },
+};
+
 marked.setOptions({
   gfm: true,
   breaks: true,
 });
 
-// Default marked emits `<pre><code class="language-xxx">` for fenced blocks,
-// which our CSS uses to style/label code. We only reflow JSON here.
-marked.use({ walkTokens: prettyPrintJsonBlocks });
+marked.use({ walkTokens: prettyPrintJsonBlocks, renderer: customRenderer });
 
 /**
  * Render markdown to a sanitized-enough HTML string for our trusted CSP.

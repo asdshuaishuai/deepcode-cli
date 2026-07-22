@@ -297,6 +297,11 @@ export class SessionBridge {
     this.manager.interruptActiveSession();
   }
 
+  adjustBashTimeout(deltaMs: number): { timeoutMs: number } | null {
+    const result = this.manager.adjustActiveBashTimeout(deltaMs);
+    return result ? { timeoutMs: result.timeoutMs } : null;
+  }
+
   denyPermission(reason?: string): void {
     const id = this.manager.getActiveSessionId();
     if (id) {

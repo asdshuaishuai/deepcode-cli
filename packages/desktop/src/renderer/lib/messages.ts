@@ -133,3 +133,20 @@ export function getPlanLines(summary: ToolSummary): string[] {
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0);
 }
+
+/**
+ * Port of CLI's findExpandedThinkingId — at most one thinking block is expanded,
+ * and it resets when a non-thinking assistant message arrives.
+ */
+export function findExpandedThinkingId(messages: SessionMessage[]): string | null {
+  let expanded: string | null = null;
+  for (const message of messages) {
+    if (message.role !== "assistant") continue;
+    if (message.meta?.asThinking) {
+      expanded = message.id;
+    } else {
+      expanded = null;
+    }
+  }
+  return expanded;
+}

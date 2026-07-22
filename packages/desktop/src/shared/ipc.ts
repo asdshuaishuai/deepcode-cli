@@ -41,6 +41,7 @@ export const IpcRequest = {
   PromptSend: "prompt:send",
   PromptInterrupt: "prompt:interrupt",
   PermissionDeny: "permission:deny",
+  AdjustBashTimeout: "prompt:adjustBashTimeout",
 
   SkillsList: "skills:list",
   SettingsGet: "settings:get",
@@ -279,6 +280,7 @@ export type DesktopApi = {
   sendPrompt(prompt: UserPromptContent): Promise<{ ok: boolean; error?: string }>;
   interrupt(): Promise<void>;
   denyPermission(reason?: string): Promise<void>;
+  adjustBashTimeout(deltaMs: number): Promise<{ timeoutMs: number } | null>;
 
   listSkills(sessionId?: string): Promise<SkillInfo[]>;
   getSettings(): Promise<SettingsSummary>;

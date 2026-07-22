@@ -67,6 +67,7 @@ export const zhTW: Record<MessageKey, string> = {
   "composer.planHint": "輸入計畫需求 · Shift+Tab 切換",
   "composer.removeSkill": "移除技能",
   "composer.hint": "Enter 傳送 · Shift+Enter 換行",
+  "composer.thinking": "思考中\u2026",
 
   // ── Empty states ──────────────────────────────────────────
   "empty.subtitle": "開始對話，建置、重構或探索你的程式碼庫。",
@@ -175,6 +176,14 @@ export const zhTW: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "請求失敗。",
   "app.permissionDenied": "已拒絕授權。請在下方補充說明後按 Enter 繼續。",
+
+  // ── Process output panel ─────────────────────────────────
+  "process.title": "進程輸出",
+  "process.timeout": "超時",
+  "process.noTimeout": "無超時",
+  "process.running": "執行中",
+  "process.timeoutSet": "超時已設為",
+  "process.noAdjustable": "無可調整的 Bash 超時",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "設定",

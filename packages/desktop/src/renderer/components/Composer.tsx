@@ -25,6 +25,8 @@ type Props = {
   imageUrls?: string[];
   /** Remove an attached image. */
   onRemoveImage?: (index: number) => void;
+  /** Add an image (data-URL) from clipboard paste or drag-drop. */
+  onAddImage?: (dataUrl: string) => void;
 };
 
 type SlashCandidate = {
@@ -46,6 +48,7 @@ const BUILTIN_SLASHES: SlashCandidate[] = [
   { kind: "builtin", name: "raw", label: "/raw", description: "Cycle reasoning display (collapse/expand/hide)" },
   { kind: "builtin", name: "mcp", label: "/mcp", description: "View MCP server status and tools" },
   { kind: "builtin", name: "exit", label: "/exit", description: "Quit Deep Code" },
+  { kind: "builtin", name: "settings", label: "/settings", description: "Open settings panel" },
 ];
 
 /** Detect a token (starting with /, $ or @) at or before the cursor. */
@@ -85,6 +88,7 @@ export function Composer(props: Props): JSX.Element {
     onSlashCommand,
     imageUrls = [],
     onRemoveImage,
+    onAddImage,
   } = props;
   const { t } = useI18n();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -102,6 +106,11 @@ export function Composer(props: Props): JSX.Element {
   const undoStackRef = useRef<string[]>([]);
   const redoStackRef = useRef<string[]>([]);
   const skipUndoRecordRef = useRef(false);
+
+  // Prompt history for Up/Down arrow navigation.
+  const promptHistoryRef = useRef<string[]>([]);
+  const [historyCursor, setHistoryCursor] = useState(-1);
+  const draftBeforeHistoryRef = useRef<string | null>(null);
 
   // Build slash candidates from skills + builtins
   const slashItems = useMemo<SlashCandidate[]>(() => {
@@ -281,6 +290,13 @@ export function Composer(props: Props): JSX.Element {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (!busy && !disabled && canSend) {
+        // Save to prompt history before sending
+        const trimmed = value.trim();
+        if (trimmed) {
+          promptHistoryRef.current = [...promptHistoryRef.current.slice(-49), trimmed];
+        }
+        setHistoryCursor(-1);
+        draftBeforeHistoryRef.current = null;
         onSend();
       }
       return;
@@ -289,6 +305,41 @@ export function Composer(props: Props): JSX.Element {
     if (e.key === "Escape" && busy) {
       e.preventDefault();
       onStop();
+      return;
+    }
+
+    // ═══ Prompt history navigation (Up/Down arrow) ═══
+    // Only activate when no menu is open and cursor is at start (Up) or end (Down) of text.
+    if (e.key === "ArrowUp" && !showSlashMenu && !showFileMenu) {
+      const history = promptHistoryRef.current;
+      if (history.length > 0) {
+        const textarea = textareaRef.current;
+        const atStart = textarea ? textarea.selectionStart === 0 && textarea.selectionEnd === 0 : true;
+        if (atStart || value === "") {
+          e.preventDefault();
+          const prevCursor = historyCursor === -1 ? history.length : historyCursor;
+          const nextCursor = Math.max(0, prevCursor - 1);
+          if (historyCursor === -1) {
+            draftBeforeHistoryRef.current = value;
+          }
+          setHistoryCursor(nextCursor);
+          onChange(history[nextCursor] ?? "");
+          return;
+        }
+      }
+    }
+    if (e.key === "ArrowDown" && !showSlashMenu && !showFileMenu && historyCursor !== -1) {
+      e.preventDefault();
+      const history = promptHistoryRef.current;
+      const nextCursor = Math.min(history.length, historyCursor + 1);
+      if (nextCursor === history.length) {
+        onChange(draftBeforeHistoryRef.current ?? "");
+        setHistoryCursor(-1);
+        draftBeforeHistoryRef.current = null;
+      } else {
+        setHistoryCursor(nextCursor);
+        onChange(history[nextCursor] ?? "");
+      }
       return;
     }
   }
@@ -301,6 +352,58 @@ export function Composer(props: Props): JSX.Element {
     pushUndo(value);
     onChange(e.target.value);
     setCursorPos(e.target.selectionStart ?? 0);
+  }
+
+  // ── Image paste (Ctrl+V with image in clipboard) ──────────────────────────
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>): void {
+    if (!onAddImage) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            onAddImage(reader.result);
+          }
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+    }
+    // No image in clipboard — let default text paste proceed.
+  }
+
+  // ── Drag & drop image files onto the composer card ────────────────────────
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
+    if (!onAddImage) return;
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>): void {
+    if (!onAddImage) return;
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    let handled = false;
+    for (const file of files) {
+      if (file.type.startsWith("image/")) {
+        handled = true;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            onAddImage(reader.result);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    if (handled) e.preventDefault();
   }
 
   return (
@@ -339,7 +442,7 @@ export function Composer(props: Props): JSX.Element {
       ) : null}
 
       {/* Unified floating composer card: attachments → input → toolbar */}
-      <div className="ui-composer-card">
+      <div className="ui-composer-card" onDragOver={handleDragOver} onDrop={handleDrop}>
         {/* Attachments zone: images + selected skill chips */}
         {imageUrls.length > 0 || selectedSkills.length > 0 ? (
           <div className="ui-composer-attachments">
@@ -390,6 +493,7 @@ export function Composer(props: Props): JSX.Element {
           onKeyDown={handleKeyDown}
           onSelect={handleSelect}
           onClick={handleSelect}
+          onPaste={handlePaste}
         />
 
         {/* Bottom toolbar: plan toggle + status · hint + send/stop */}

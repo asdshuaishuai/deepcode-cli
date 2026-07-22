@@ -66,6 +66,7 @@ export const ko: Record<MessageKey, string> = {
   "composer.planHint": "계획 요청 입력 · Shift+Tab으로 전환",
   "composer.removeSkill": "스킬 제거",
   "composer.hint": "Enter로 전송 · Shift+Enter로 줄바꿈",
+  "composer.thinking": "생각 중\u2026",
 
   // ── Empty states ──────────────────────────────────────────
   "empty.subtitle": "대화를 시작하여 코드베이스를 빌드, 리팩터링 또는 탐색하세요.",
@@ -174,6 +175,14 @@ export const ko: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "요청에 실패했습니다.",
   "app.permissionDenied": "권한이 거부되었습니다. 아래에 답변을 추가한 후 Enter를 눌러 계속하세요.",
+
+  // ── Process output panel ─────────────────────────────────
+  "process.title": "프로세스 출력",
+  "process.timeout": "타임아웃",
+  "process.noTimeout": "타임아웃 없음",
+  "process.running": "실행 중",
+  "process.timeoutSet": "타임아웃 설정",
+  "process.noAdjustable": "조정 가능한 Bash 타임아웃이 없습니다",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "설정",

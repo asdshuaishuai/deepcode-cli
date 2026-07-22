@@ -1,4 +1,4 @@
-import { spawn, type SpawnOptions } from "child_process";
+import { spawn, type ChildProcess, type SpawnOptions } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { createMcpSpawnSpec } from "../mcp/mcp-client";
@@ -212,8 +212,6 @@ export function runCodegraphInit(
   runCodegraphCommand(projectRoot, ["init"], spawnProcess);
 }
 
-const inFlightSyncs = new Set<string>();
-
 /**
  * Run `codegraph sync <projectRoot>` as a fire-and-forget subprocess to update the
  * incremental index after code changes. No-ops when the project is not CodeGraph
@@ -244,4 +242,47 @@ export function runCodegraphSync(
     inFlightSyncs.delete(key);
     // Ignore sync failures.
   }
+}
+
+const inFlightSyncs = new Set<string>();
+
+/**
+ * Same as runCodegraphInit but returns a Promise that resolves once the child
+ * process exits (success or error). The desktop UI uses this so the "reindex"
+ * button can await completion before refreshing the list.
+ */
+export function runCodegraphInitAsync(projectRoot: string): Promise<void> {
+  return runCodegraphCommandAsync(projectRoot, ["init"]);
+}
+
+/**
+ * Same as runCodegraphSync but returns a Promise that resolves once the child
+ * process exits (success or error).
+ */
+export function runCodegraphSyncAsync(projectRoot: string): Promise<void> {
+  if (!hasCodegraphProject(projectRoot)) {
+    return Promise.resolve();
+  }
+  const key = path.resolve(projectRoot);
+  if (inFlightSyncs.has(key)) {
+    return Promise.resolve();
+  }
+  inFlightSyncs.add(key);
+  return runCodegraphCommandAsync(projectRoot, ["sync", projectRoot]).finally(() => {
+    inFlightSyncs.delete(key);
+  });
+}
+
+/** Fire-and-forget never waited for exit. Async version that does. */
+async function runCodegraphCommandAsync(projectRoot: string, subcommand: string[]): Promise<void> {
+  return new Promise<void>((resolve) => {
+    try {
+      const cp = spawnCodegraph(projectRoot, subcommand, spawn as unknown as CodegraphSpawn) as unknown as ChildProcess;
+      const done = () => resolve();
+      cp.on("error", done);
+      cp.on("close", done);
+    } catch {
+      resolve();
+    }
+  });
 }
