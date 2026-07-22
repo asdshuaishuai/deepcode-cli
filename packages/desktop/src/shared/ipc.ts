@@ -3,6 +3,7 @@
 
 import type {
   ModelConfigSelection,
+  ModelUsage,
   PermissionDefaultMode,
   PermissionScope,
   ReasoningEffort,
@@ -12,6 +13,9 @@ import type {
   UndoTarget,
   UserPromptContent,
 } from "@vegamo/deepcode-core";
+
+/** Per-model token usage accounting, re-exported for renderer consumers. */
+export type { ModelUsage };
 import type { McpServerStatus } from "@vegamo/deepcode-core";
 import type { AskPermissionRequest, UserToolPermission } from "@vegamo/deepcode-core";
 

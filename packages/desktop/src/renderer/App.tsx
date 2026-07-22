@@ -22,6 +22,7 @@ import { ModelModal } from "./components/ModelModal";
 import { PluginCenterModal } from "./components/PluginCenterModal";
 import { SettingsModal } from "./components/SettingsModal";
 import { UndoModal } from "./components/UndoModal";
+import { TokenUsageModal } from "./components/TokenUsageModal";
 import type { PermissionResult } from "./lib/permissions";
 import {
   findPendingAskUserQuestion,
@@ -88,7 +89,7 @@ export function App(): JSX.Element {
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
   const [dismissedQuestionIds, setDismissedQuestionIds] = useState<Set<string>>(() => new Set());
 
-  const [modal, setModal] = useState<"model" | "plugins" | "settings" | "undo" | null>(null);
+  const [modal, setModal] = useState<"model" | "plugins" | "settings" | "undo" | "tokens" | null>(null);
   const [editable, setEditable] = useState<EditableSettings | null>(null);
 
   const [appearance, setAppearanceState] = useState<Appearance>("light");
@@ -435,6 +436,12 @@ export function App(): JSX.Element {
       },
       { id: "undo", label: t("command.undo.label"), keywords: "undo restore", run: () => setModal("undo") },
       {
+        id: "tokens",
+        label: t("command.tokens.label"),
+        keywords: "token usage cost consumption",
+        run: () => setModal("tokens"),
+      },
+      {
         id: "init",
         label: t("command.init.label"),
         keywords: "init agents",
@@ -503,6 +510,9 @@ export function App(): JSX.Element {
         </RailButton>
         <RailButton title={t("rail.plugins")} aria-label={t("rail.plugins")} onClick={() => setModal("plugins")}>
           🧩
+        </RailButton>
+        <RailButton title={t("rail.tokens")} aria-label={t("rail.tokens")} onClick={() => setModal("tokens")}>
+          📊
         </RailButton>
         <RailSpacer />
         <RailButton title={reasoningTitle} aria-label={reasoningTitle} onClick={handleCycleReasoning}>
@@ -629,6 +639,9 @@ export function App(): JSX.Element {
       ) : null}
       {modal === "undo" ? (
         <UndoModal sessionId={activeId} onClose={() => setModal(null)} onRestored={() => void handleUndoRestored()} />
+      ) : null}
+      {modal === "tokens" ? (
+        <TokenUsageModal sessions={sessions} activeId={activeId} onClose={() => setModal(null)} />
       ) : null}
 
       <CommandPalette

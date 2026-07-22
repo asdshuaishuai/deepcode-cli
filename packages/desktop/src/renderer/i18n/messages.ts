@@ -245,6 +245,7 @@ export const en = {
   "rail.settings": "Settings",
   "rail.undo": "Undo / restore",
   "rail.commands": "Commands (⌘K)",
+  "rail.tokens": "Token usage",
 
   // ── Session panel ─────────────────────────────────────────
   "sessionPanel.collapse": "Collapse panel",
@@ -260,6 +261,28 @@ export const en = {
   "command.undo.label": "Undo / restore",
   "command.init.label": "Generate AGENTS.md",
   "command.raw.label": "Cycle reasoning display",
+  "command.tokens.label": "Token usage",
+
+  // ── Token usage panel ─────────────────────────────────────
+  "tokens.title": "Token usage",
+  "tokens.subtitle": "Consumption across all sessions in this workspace.",
+  "tokens.total": "Total tokens",
+  "tokens.prompt": "Prompt",
+  "tokens.completion": "Completion",
+  "tokens.requests": "Requests",
+  "tokens.activeContext": "Active session context",
+  "tokens.noActive": "No active session",
+  "tokens.tokensUnit": "{n} tokens",
+  "tokens.sessionsCounted": "{n} sessions counted",
+  "tokens.cacheHitRate": "{n}% prompt cache hit",
+  "tokens.perModel": "By model",
+  "tokens.colModel": "Model",
+  "tokens.colPrompt": "Prompt",
+  "tokens.colCompletion": "Completion",
+  "tokens.colTotal": "Total",
+  "tokens.colReqs": "Reqs",
+  "tokens.emptyTitle": "No token usage yet",
+  "tokens.emptyHint": "Run a prompt and usage will appear here.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -506,6 +529,7 @@ export const zh: Record<MessageKey, string> = {
   "rail.settings": "设置",
   "rail.undo": "撤销 / 恢复",
   "rail.commands": "命令面板（⌘K）",
+  "rail.tokens": "Token 消耗",
 
   // ── Session panel ─────────────────────────────────────────
   "sessionPanel.collapse": "收起面板",
@@ -521,6 +545,28 @@ export const zh: Record<MessageKey, string> = {
   "command.undo.label": "撤销 / 恢复",
   "command.init.label": "生成 AGENTS.md",
   "command.raw.label": "切换推理显示",
+  "command.tokens.label": "Token 消耗",
+
+  // ── Token usage panel ─────────────────────────────────────
+  "tokens.title": "Token 消耗",
+  "tokens.subtitle": "本工作区所有会话的 Token 消耗统计。",
+  "tokens.total": "总 Token",
+  "tokens.prompt": "输入",
+  "tokens.completion": "输出",
+  "tokens.requests": "请求数",
+  "tokens.activeContext": "当前会话上下文",
+  "tokens.noActive": "无活动会话",
+  "tokens.tokensUnit": "{n} tokens",
+  "tokens.sessionsCounted": "已统计 {n} 个会话",
+  "tokens.cacheHitRate": "输入缓存命中 {n}%",
+  "tokens.perModel": "按模型",
+  "tokens.colModel": "模型",
+  "tokens.colPrompt": "输入",
+  "tokens.colCompletion": "输出",
+  "tokens.colTotal": "合计",
+  "tokens.colReqs": "请求",
+  "tokens.emptyTitle": "暂无 Token 消耗",
+  "tokens.emptyHint": "发起一次对话后，消耗数据将显示在这里。",
 };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { en, zh };
