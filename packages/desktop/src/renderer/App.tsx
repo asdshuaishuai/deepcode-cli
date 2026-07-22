@@ -19,10 +19,18 @@ import { PermissionCard } from "./components/PermissionCard";
 import { QuestionCard } from "./components/QuestionCard";
 import { PlanCard } from "./components/PlanCard";
 import { ModelModal } from "./components/ModelModal";
-import { PluginCenterModal } from "./components/PluginCenterModal";
-import { SettingsModal } from "./components/SettingsModal";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { TaskPanel } from "./components/TaskPanel";
+import { SourceControlPanel } from "./components/SourceControlPanel";
+import { PluginMcpPanel } from "./components/PluginMcpPanel";
+import { PluginDetail, type PluginSelection } from "./components/PluginDetail";
+import { ContextProgress } from "./components/ContextProgress";
+import { TokenStatsPanel } from "./components/TokenStatsPanel";
+import { IndexLibraryPanel } from "./components/IndexLibraryPanel";
+import { DiffOverlay, type DiffTarget } from "./components/DiffOverlay";
 import { UndoModal } from "./components/UndoModal";
-import { TokenUsageModal } from "./components/TokenUsageModal";
+import { aggregateUsage } from "./lib/token-usage";
+import { buildToolSummary, getPlanLines } from "./lib/messages";
 import type { PermissionResult } from "./lib/permissions";
 import {
   findPendingAskUserQuestion,
@@ -34,19 +42,34 @@ import {
   getStoredReasoningMode,
   nextReasoningMode,
   resolveAppearance,
+  resolveTheme,
+  baseTheme,
   setAppearance as persistAppearance,
+  setTheme as persistTheme,
   setReasoningMode as persistReasoningMode,
   type Appearance,
   type ReasoningMode,
+  type Theme,
 } from "./lib/appearance";
 import { useI18n } from "./i18n";
-import { CommandPalette, Rail, RailBrand, RailButton, RailSpacer, type CommandItem } from "./ui/index";
+import { CommandPalette, Rail, RailButton, RailSpacer, type CommandItem } from "./ui/index";
 
 type PendingPermissionReply = {
   sessionId: string;
   permissions: PermissionResult["permissions"];
   alwaysAllows: PermissionResult["alwaysAllows"];
 };
+
+/** Extract the markdown plan from the newest UpdatePlan tool message, if any. */
+function findLatestPlan(messages: SessionMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (!message || message.role !== "tool") continue;
+    const lines = getPlanLines(buildToolSummary(message));
+    if (lines.length > 0) return lines.join("\n");
+  }
+  return null;
+}
 
 function syntheticUserMessage(sessionId: string, content: string): SessionMessage {
   const now = new Date().toISOString();
@@ -74,7 +97,7 @@ export function App(): JSX.Element {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [mcpStatuses, setMcpStatuses] = useState<McpServerStatus[]>([]);
+  const [, setMcpStatuses] = useState<McpServerStatus[]>([]);
 
   const [draft, setDraft] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -89,10 +112,20 @@ export function App(): JSX.Element {
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
   const [dismissedQuestionIds, setDismissedQuestionIds] = useState<Set<string>>(() => new Set());
 
-  const [modal, setModal] = useState<"model" | "plugins" | "settings" | "undo" | "tokens" | null>(null);
+  const [modal, setModal] = useState<"model" | "undo" | null>(null);
   const [editable, setEditable] = useState<EditableSettings | null>(null);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<string | undefined>(undefined);
+
+  const [mainView, setMainView] = useState<"chat" | "settings" | "plugins">("chat");
+  const [selectedPlugin, setSelectedPlugin] = useState<PluginSelection | null>(null);
+  const [sidebarView, setSidebarView] = useState<"explorer" | "scm" | "tasks" | "tokens" | "plugins">("explorer");
+  const [treeRefreshKey, setTreeRefreshKey] = useState(0);
+  const [diffTarget, setDiffTarget] = useState<DiffTarget | null>(null);
+  const [branch, setBranch] = useState("");
+  const [branches, setBranches] = useState<string[]>([]);
 
   const [appearance, setAppearanceState] = useState<Appearance>("light");
+  const [theme, setThemeState] = useState<Theme>("aqua");
   const [reasoningMode, setReasoningModeState] = useState<ReasoningMode>(() => getStoredReasoningMode());
 
   const [panelOpen, setPanelOpen] = useState(true);
@@ -100,6 +133,24 @@ export function App(): JSX.Element {
 
   const activeIdRef = useRef<string | null>(null);
   activeIdRef.current = activeId;
+  const projectRootRef = useRef<string>("");
+  projectRootRef.current = projectRoot;
+  const pendingSelectRef = useRef<string | null>(null);
+
+  const bumpTree = useCallback(() => setTreeRefreshKey((k) => k + 1), []);
+  // VSCode-style activity bar: selecting a rail view swaps the left panel while
+  // the main area stays put. Re-selecting the active view toggles the panel.
+  const selectView = useCallback((view: "explorer" | "scm" | "tasks" | "tokens" | "plugins") => {
+    setSidebarView((prev) => {
+      if (prev === view) {
+        setPanelOpen((wasOpen) => !wasOpen);
+        return view;
+      }
+      setPanelOpen(true);
+      return view;
+    });
+  }, []);
+  const openTokensView = useCallback(() => selectView("tokens"), [selectView]);
 
   // ── Data loading ────────────────────────────────────────────────────────────
   const refreshSessions = useCallback(async () => {
@@ -116,6 +167,12 @@ export function App(): JSX.Element {
 
   const refreshMcp = useCallback(async () => {
     setMcpStatuses(await api.mcpStatus());
+  }, []);
+
+  const refreshGit = useCallback(async () => {
+    const [current, list] = await Promise.all([api.gitCurrentBranch(), api.gitListBranches()]);
+    setBranch(current);
+    setBranches(list);
   }, []);
 
   const loadSession = useCallback(
@@ -152,7 +209,8 @@ export function App(): JSX.Element {
       setProjectRoot(root);
       setPlatform(plat);
       setAppearanceState(resolveAppearance(plat));
-      await Promise.all([refreshSessions(), refreshSettings(), refreshSkills(), refreshMcp()]);
+      setThemeState(resolveTheme(plat));
+      await Promise.all([refreshSessions(), refreshSettings(), refreshSkills(), refreshMcp(), refreshGit()]);
       const active = await api.getActiveSession();
       if (!disposed && active) {
         await loadSession(active);
@@ -182,14 +240,18 @@ export function App(): JSX.Element {
         setActiveStatus(entry.status);
         setAskPermissions(entry.askPermissions);
       }
+      bumpTree();
     });
 
     const offMcp = api.onMcpStatusChanged(() => void refreshMcp());
     const offRoot = api.onProjectRootChanged((root) => {
       setProjectRoot(root);
       void (async () => {
-        await Promise.all([refreshSessions(), refreshSettings(), refreshSkills(), refreshMcp()]);
-        await loadSession(null);
+        await Promise.all([refreshSessions(), refreshSettings(), refreshSkills(), refreshMcp(), refreshGit()]);
+        const pending = pendingSelectRef.current;
+        pendingSelectRef.current = null;
+        await loadSession(pending);
+        bumpTree();
       })();
     });
 
@@ -200,7 +262,7 @@ export function App(): JSX.Element {
       offMcp();
       offRoot();
     };
-  }, [loadSession, refreshMcp, refreshSessions, refreshSettings, refreshSkills]);
+  }, [bumpTree, loadSession, refreshGit, refreshMcp, refreshSessions, refreshSettings, refreshSkills]);
 
   // ── Prompt lifecycle ─────────────────────────────────────────────────────────
   const runPrompt = useCallback(
@@ -328,12 +390,47 @@ export function App(): JSX.Element {
     [pendingPlan, runPrompt]
   );
 
-  const handlePickFolder = useCallback(async () => {
+  // New workspace: pick a folder, switch root; the project-root-changed handler
+  // resets to a fresh session slate (a session is created lazily on first prompt).
+  const handleNewWorkspace = useCallback(async () => {
     const picked = await api.pickFolder();
     if (picked) {
+      pendingSelectRef.current = null;
+      setMainView("chat");
       await api.setProjectRoot(picked);
     }
   }, []);
+
+  // New session within a workspace: switch root if needed (fresh slate follows),
+  // else just reset the current workspace to a fresh session.
+  const handleNewSessionInWorkspace = useCallback(
+    async (root: string) => {
+      setMainView("chat");
+      if (root && root !== projectRootRef.current) {
+        pendingSelectRef.current = null;
+        await api.setProjectRoot(root);
+        return;
+      }
+      await loadSession(null);
+    },
+    [loadSession]
+  );
+
+  const handleSwitchBranch = useCallback(
+    async (next: string) => {
+      const result = await api.gitCheckout(next);
+      if (result.ok) {
+        await refreshGit();
+        await refreshSessions();
+        bumpTree();
+      } else {
+        setErrorLine(result.error ?? t("app.requestFailed"));
+        // Keep the dropdown in sync with the real branch after a failed switch.
+        await refreshGit();
+      }
+    },
+    [bumpTree, refreshGit, refreshSessions, t]
+  );
 
   const handleSetModel = useCallback(async (selection: ModelConfigSelection) => {
     setSettings(await api.setModel(selection));
@@ -346,7 +443,8 @@ export function App(): JSX.Element {
 
   const handleOpenSettings = useCallback(async () => {
     setEditable(await api.getEditableSettings());
-    setModal("settings");
+    setSettingsInitialTab(undefined);
+    setMainView("settings");
   }, []);
 
   const handleToggleAppearance = useCallback(() => {
@@ -356,6 +454,14 @@ export function App(): JSX.Element {
       return next;
     });
   }, []);
+
+  const handleToggleTheme = useCallback(() => {
+    setThemeState((prev) => {
+      const next: Theme = prev === "glass" ? baseTheme(platform) : "glass";
+      persistTheme(next);
+      return next;
+    });
+  }, [platform]);
 
   const handleCycleReasoning = useCallback(() => {
     setReasoningModeState((prev) => {
@@ -380,30 +486,68 @@ export function App(): JSX.Element {
       const { summary, editable: fresh } = await api.updateSettings(next);
       setSettings(summary);
       setEditable(fresh);
-      setModal(null);
+      setMainView("chat");
       await Promise.all([refreshMcp(), refreshSkills(activeIdRef.current ?? undefined)]);
     },
     [refreshMcp, refreshSkills]
   );
 
-  const handleNewSession = useCallback(() => void loadSession(null), [loadSession]);
+  const handleNewSession = useCallback(() => {
+    setMainView("chat");
+    void loadSession(null);
+  }, [loadSession]);
   const handleDeleteSession = useCallback(
     async (id: string) => {
       await api.deleteSession(id);
       await refreshSessions();
+      bumpTree();
       if (id === activeIdRef.current) {
         await loadSession(null);
       }
     },
-    [loadSession, refreshSessions]
+    [bumpTree, loadSession, refreshSessions]
   );
   const handleRenameSession = useCallback(
     async (id: string, summary: string) => {
       await api.renameSession(id, summary);
       await refreshSessions();
+      bumpTree();
     },
-    [refreshSessions]
+    [bumpTree, refreshSessions]
   );
+  const handleArchiveSession = useCallback(
+    async (id: string) => {
+      await api.archiveSession(id);
+      await refreshSessions();
+      bumpTree();
+      if (id === activeIdRef.current) {
+        await loadSession(null);
+      }
+    },
+    [bumpTree, loadSession, refreshSessions]
+  );
+  const handleUnarchiveSession = useCallback(
+    async (id: string) => {
+      await api.unarchiveSession(id);
+      await refreshSessions();
+      bumpTree();
+    },
+    [bumpTree, refreshSessions]
+  );
+  const handleSelectSession = useCallback(
+    async (root: string, id: string) => {
+      if (root && root !== projectRootRef.current) {
+        pendingSelectRef.current = id;
+        await api.setProjectRoot(root);
+        setMainView("chat");
+        return;
+      }
+      setMainView("chat");
+      await loadSession(id);
+    },
+    [loadSession]
+  );
+  const handleOpenDiff = useCallback((target: DiffTarget) => setDiffTarget(target), []);
 
   // ── ⌘K command palette ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -426,7 +570,7 @@ export function App(): JSX.Element {
         id: "plugins",
         label: t("command.plugins.label"),
         keywords: "plugins mcp skills",
-        run: () => setModal("plugins"),
+        run: () => selectView("plugins"),
       },
       {
         id: "settings",
@@ -439,7 +583,7 @@ export function App(): JSX.Element {
         id: "tokens",
         label: t("command.tokens.label"),
         keywords: "token usage cost consumption",
-        run: () => setModal("tokens"),
+        run: openTokensView,
       },
       {
         id: "init",
@@ -449,7 +593,7 @@ export function App(): JSX.Element {
       },
       { id: "raw", label: t("command.raw.label"), keywords: "reasoning raw", run: handleCycleReasoning },
     ],
-    [handleCycleReasoning, handleNewSession, handleOpenSettings, runPrompt, t]
+    [handleCycleReasoning, handleNewSession, handleOpenSettings, openTokensView, runPrompt, selectView, t]
   );
 
   // ── Derived UI ────────────────────────────────────────────────────────────────
@@ -466,6 +610,7 @@ export function App(): JSX.Element {
     !pendingPermissionReply &&
     !busy;
   const showPlan = Boolean(pendingPlan) && !busy;
+  const hasPlan = useMemo(() => findLatestPlan(messages) !== null, [messages]);
 
   const footer = showQuestion ? (
     <QuestionCard
@@ -481,6 +626,13 @@ export function App(): JSX.Element {
 
   const composerDisabled = showQuestion || showPermission || showPlan;
 
+  // Token mini-panel figures: active session context + workspace grand total.
+  const workspaceUsage = useMemo(() => aggregateUsage(sessions), [sessions]);
+  const activeContextTokens = useMemo(() => {
+    const s = activeId ? sessions.find((x) => x.id === activeId) : null;
+    return s ? s.activeTokens : 0;
+  }, [activeId, sessions]);
+
   const reasoningIcon = reasoningMode === "hidden" ? "◌" : reasoningMode === "expanded" ? "◉" : "◎";
   const reasoningTitle =
     reasoningMode === "hidden"
@@ -489,30 +641,58 @@ export function App(): JSX.Element {
         ? t("topbar.reasoningExpanded")
         : t("topbar.reasoningNormal");
   const appearanceTitle = appearance === "dark" ? t("topbar.appearanceDark") : t("topbar.appearanceLight");
+  const themeTitle = theme === "glass" ? t("topbar.themeGlass") : t("topbar.themeNative");
 
   return (
     <div className={`ui-shell${panelOpen ? " panel-open" : ""}`}>
       <Rail>
-        <RailBrand>DC</RailBrand>
         <RailButton title={t("rail.newSession")} aria-label={t("rail.newSession")} onClick={handleNewSession}>
           ✎
         </RailButton>
         <RailButton
-          active={panelOpen}
+          active={panelOpen && sidebarView === "explorer"}
           title={t("rail.sessions")}
           aria-label={t("rail.sessions")}
-          onClick={() => setPanelOpen((v) => !v)}
+          onClick={() => selectView("explorer")}
         >
           ☰
         </RailButton>
+        <RailButton
+          active={panelOpen && sidebarView === "scm"}
+          title={t("rail.git")}
+          aria-label={t("rail.git")}
+          onClick={() => selectView("scm")}
+        >
+          ⑂
+        </RailButton>
+        {hasPlan ? (
+          <RailButton
+            active={panelOpen && sidebarView === "tasks"}
+            title={t("rail.tasks")}
+            aria-label={t("rail.tasks")}
+            onClick={() => selectView("tasks")}
+          >
+            ✓
+          </RailButton>
+        ) : null}
         <RailButton title={t("rail.commands")} aria-label={t("rail.commands")} onClick={() => setPaletteOpen(true)}>
           ⌘
         </RailButton>
-        <RailButton title={t("rail.plugins")} aria-label={t("rail.plugins")} onClick={() => setModal("plugins")}>
-          🧩
+        <RailButton
+          active={panelOpen && sidebarView === "plugins"}
+          title={t("rail.plugins")}
+          aria-label={t("rail.plugins")}
+          onClick={() => selectView("plugins")}
+        >
+          ⧉
         </RailButton>
-        <RailButton title={t("rail.tokens")} aria-label={t("rail.tokens")} onClick={() => setModal("tokens")}>
-          📊
+        <RailButton
+          active={panelOpen && sidebarView === "tokens"}
+          title={t("rail.tokens")}
+          aria-label={t("rail.tokens")}
+          onClick={openTokensView}
+        >
+          ▦
         </RailButton>
         <RailSpacer />
         <RailButton title={reasoningTitle} aria-label={reasoningTitle} onClick={handleCycleReasoning}>
@@ -521,10 +701,16 @@ export function App(): JSX.Element {
         <RailButton title={appearanceTitle} aria-label={appearanceTitle} onClick={handleToggleAppearance}>
           {appearance === "dark" ? "☾" : "☀"}
         </RailButton>
+        {platform !== "win32" ? (
+          <RailButton active={theme === "glass"} title={themeTitle} aria-label={themeTitle} onClick={handleToggleTheme}>
+            ❖
+          </RailButton>
+        ) : null}
         <RailButton title={t("rail.undo")} aria-label={t("rail.undo")} onClick={() => setModal("undo")}>
           ↺
         </RailButton>
         <RailButton
+          active={mainView === "settings"}
           title={t("rail.settings")}
           aria-label={t("rail.settings")}
           onClick={() => void handleOpenSettings()}
@@ -533,115 +719,159 @@ export function App(): JSX.Element {
         </RailButton>
       </Rail>
 
-      <Sidebar
-        sessions={sessions}
-        activeId={activeId}
-        onSelect={(id) => void loadSession(id)}
-        onDelete={(id) => void handleDeleteSession(id)}
-        onRename={(id, summary) => void handleRenameSession(id, summary)}
-        onCollapse={() => setPanelOpen(false)}
-      />
-
-      <TopBar
-        platform={platform}
-        projectRoot={projectRoot}
-        settings={settings}
-        onPickFolder={() => void handlePickFolder()}
-        onOpenModel={() => setModal("model")}
-        onOpenSettings={() => void handleOpenSettings()}
-      />
-
-      <div className="ui-main">
-        <MessageList
-          messages={messages}
-          hasActiveSession={activeId !== null || messages.length > 0}
-          reasoningMode={reasoningMode}
-          onQuickAction={(action) => {
-            if (action === "plan") {
-              setPlanMode((v) => !v);
-            } else if (action === "init") {
-              void runPrompt({ text: "/init" });
-            } else if (action === "skills") {
-              setModal("plugins");
-            } else if (action === "undo") {
-              setModal("undo");
-            }
-          }}
-          footer={footer}
+      {sidebarView === "explorer" ? (
+        <Sidebar
+          activeId={activeId}
+          currentRoot={projectRoot}
+          refreshKey={treeRefreshKey}
+          sessions={sessions}
+          onSelectSession={(root, id) => void handleSelectSession(root, id)}
+          onDelete={(id) => void handleDeleteSession(id)}
+          onRename={(id, summary) => void handleRenameSession(id, summary)}
+          onArchive={(id) => void handleArchiveSession(id)}
+          onUnarchive={(id) => void handleUnarchiveSession(id)}
+          onCollapse={() => setPanelOpen(false)}
+          onNewWorkspace={() => void handleNewWorkspace()}
+          onNewSessionInWorkspace={(root) => void handleNewSessionInWorkspace(root)}
+          onOpenTokens={openTokensView}
         />
-        <div className="ui-composer-dock">
-          <Composer
-            value={draft}
-            onChange={setDraft}
-            onSend={handleSend}
-            onStop={handleStop}
-            busy={busy}
-            disabled={composerDisabled}
-            planMode={planMode}
-            onTogglePlan={() => setPlanMode((v) => !v)}
-            skills={skills}
-            selectedSkills={selectedSkills}
-            onToggleSkill={(name) =>
-              setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
-            }
-            statusText={statusLine}
-            errorText={errorLine}
-            imageUrls={imageUrls}
-            onRemoveImage={(i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
-            onSlashCommand={(cmd) => {
-              if (cmd === "new") {
-                handleNewSession();
-              } else if (cmd === "plan") {
-                setPlanMode((v) => !v);
-              } else if (cmd === "model") {
-                setModal("model");
-              } else if (cmd === "mcp" || cmd === "plugins") {
-                setModal("plugins");
-              } else if (cmd === "skills") {
-                // Skills are shown as chips already, nothing extra needed
-              } else if (cmd === "settings") {
-                void handleOpenSettings();
-              } else if (cmd === "undo") {
-                setModal("undo");
-              } else if (cmd === "init") {
-                void runPrompt({ text: "/init" });
-              } else if (cmd === "raw") {
-                handleCycleReasoning();
-              } else if (cmd === "continue") {
-                handleSend();
-              }
-            }}
-          />
+      ) : sidebarView === "scm" ? (
+        <SourceControlPanel refreshKey={treeRefreshKey} sessionId={activeId} onOpenDiff={handleOpenDiff} />
+      ) : sidebarView === "tasks" ? (
+        <TaskPanel messages={messages} />
+      ) : sidebarView === "tokens" ? (
+        <div className="ui-side-panel ui-token-view">
+          <TokenStatsPanel sessions={sessions} />
+          <IndexLibraryPanel />
         </div>
-      </div>
-
-      {modal === "model" && settings ? (
-        <ModelModal settings={settings} onApply={(sel) => void handleSetModel(sel)} onClose={() => setModal(null)} />
-      ) : null}
-      {modal === "plugins" ? (
-        <PluginCenterModal
-          servers={mcpStatuses}
+      ) : (
+        <PluginMcpPanel
           skills={skills}
           selectedSkills={selectedSkills}
           onToggleSkill={(name) =>
             setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
           }
-          onReconnect={(name) => void api.mcpReconnect(name)}
-          onClose={() => setModal(null)}
+          onRefreshSkills={async () => {
+            await api.pluginRefreshSkills(activeId ?? undefined);
+            await refreshSkills(activeId ?? undefined);
+          }}
+          selected={selectedPlugin}
+          onSelect={(sel) => {
+            setSelectedPlugin(sel);
+            setMainView("plugins");
+          }}
         />
-      ) : null}
-      {modal === "settings" && editable ? (
-        <SettingsModal
-          initial={editable}
-          onSave={(next) => void handleSaveSettings(next)}
-          onClose={() => setModal(null)}
-        />
+      )}
+
+      <TopBar
+        platform={platform}
+        projectRoot={projectRoot}
+        settings={settings}
+        branch={branch}
+        branches={branches}
+        onSwitchBranch={(b) => void handleSwitchBranch(b)}
+        onSetModel={(sel) => void handleSetModel(sel)}
+        onOpenModel={() => setModal("model")}
+        onOpenSettings={() => void handleOpenSettings()}
+        onOpenTokens={openTokensView}
+        activeTokens={activeContextTokens}
+        totalTokens={workspaceUsage.totals.total}
+      />
+
+      <div className="ui-main">
+        {mainView === "settings" && editable ? (
+          <SettingsPanel
+            initial={editable}
+            initialTab={settingsInitialTab}
+            sessions={sessions}
+            onSave={(next) => void handleSaveSettings(next)}
+            onClose={() => setMainView("chat")}
+          />
+        ) : mainView === "plugins" ? (
+          <PluginDetail
+            selection={selectedPlugin}
+            skills={skills}
+            selectedSkills={selectedSkills}
+            onToggleSkill={(name) =>
+              setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
+            }
+            onBack={() => setMainView("chat")}
+          />
+        ) : (
+          <>
+            <MessageList
+              messages={messages}
+              hasActiveSession={activeId !== null || messages.length > 0}
+              reasoningMode={reasoningMode}
+              onQuickAction={(action) => {
+                if (action === "plan") {
+                  setPlanMode((v) => !v);
+                } else if (action === "init") {
+                  void runPrompt({ text: "/init" });
+                } else if (action === "skills") {
+                  selectView("plugins");
+                } else if (action === "undo") {
+                  setModal("undo");
+                }
+              }}
+              footer={footer}
+            />
+            <div className="ui-composer-dock">
+              <Composer
+                value={draft}
+                onChange={setDraft}
+                onSend={handleSend}
+                onStop={handleStop}
+                busy={busy}
+                disabled={composerDisabled}
+                planMode={planMode}
+                onTogglePlan={() => setPlanMode((v) => !v)}
+                skills={skills}
+                selectedSkills={selectedSkills}
+                onToggleSkill={(name) =>
+                  setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
+                }
+                statusText={statusLine}
+                errorText={errorLine}
+                imageUrls={imageUrls}
+                onRemoveImage={(i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                onSlashCommand={(cmd) => {
+                  if (cmd === "new") {
+                    handleNewSession();
+                  } else if (cmd === "plan") {
+                    setPlanMode((v) => !v);
+                  } else if (cmd === "model") {
+                    setModal("model");
+                  } else if (cmd === "mcp" || cmd === "plugins") {
+                    selectView("plugins");
+                  } else if (cmd === "skills") {
+                    // Skills are shown as chips already, nothing extra needed
+                  } else if (cmd === "settings") {
+                    void handleOpenSettings();
+                  } else if (cmd === "undo") {
+                    setModal("undo");
+                  } else if (cmd === "init") {
+                    void runPrompt({ text: "/init" });
+                  } else if (cmd === "raw") {
+                    handleCycleReasoning();
+                  } else if (cmd === "continue") {
+                    handleSend();
+                  }
+                }}
+              />
+              <ContextProgress activeTokens={activeContextTokens} model={settings?.model ?? ""} />
+            </div>
+          </>
+        )}
+      </div>
+
+      {diffTarget ? <DiffOverlay target={diffTarget} onClose={() => setDiffTarget(null)} /> : null}
+
+      {modal === "model" && settings ? (
+        <ModelModal settings={settings} onApply={(sel) => void handleSetModel(sel)} onClose={() => setModal(null)} />
       ) : null}
       {modal === "undo" ? (
         <UndoModal sessionId={activeId} onClose={() => setModal(null)} onRestored={() => void handleUndoRestored()} />
-      ) : null}
-      {modal === "tokens" ? (
-        <TokenUsageModal sessions={sessions} activeId={activeId} onClose={() => setModal(null)} />
       ) : null}
 
       <CommandPalette

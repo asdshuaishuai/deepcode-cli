@@ -14,7 +14,8 @@
     "build": "node ./build.mjs",
     "dev": "node ./build.mjs --dev",
     "start": "electron .",
-    "build-and-start": "npm run build && npm run start"
+    "build-and-start": "npm run build && npm run start",
+    "vendor:codegraph": "node ../../scripts/vendor-codegraph.js"
   },
   "dependencies": {
     "@vegamo/deepcode-core": "file:../core",

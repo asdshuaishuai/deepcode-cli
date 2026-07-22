@@ -51,6 +51,7 @@ const api: DesktopApi = {
   // ── Plugin API ────────────────────────────────────────────────────────────
   pluginSearchSkills: (query, sessionId) => ipcRenderer.invoke(IpcRequest.PluginSearchSkills, query, sessionId),
   pluginRefreshSkills: (sessionId) => ipcRenderer.invoke(IpcRequest.PluginRefreshSkills, sessionId),
+  pluginReadSkillDoc: (path) => ipcRenderer.invoke(IpcRequest.PluginReadSkillDoc, path),
   pluginUpsertMcpServer: (name, command, args, env) =>
     ipcRenderer.invoke(IpcRequest.PluginUpsertMcpServer, name, command, args, env),
   pluginRemoveMcpServer: (name) => ipcRenderer.invoke(IpcRequest.PluginRemoveMcpServer, name),
@@ -63,6 +64,35 @@ const api: DesktopApi = {
 
   // ── File scanning ───────────────────────────────────────────────────────
   scanFiles: (query) => ipcRenderer.invoke(IpcRequest.ScanFiles, query),
+
+  // ── Workspace-grouped sessions + archive ────────────────────────────────
+  listWorkspaceSessions: () => ipcRenderer.invoke(IpcRequest.WorkspaceListSessions),
+  archiveSession: (id) => ipcRenderer.invoke(IpcRequest.SessionArchive, id),
+  unarchiveSession: (id) => ipcRenderer.invoke(IpcRequest.SessionUnarchive, id),
+
+  // ── Git source control ──────────────────────────────────────────────────
+  gitStatus: () => ipcRenderer.invoke(IpcRequest.GitStatus),
+  gitStage: (file) => ipcRenderer.invoke(IpcRequest.GitStage, file),
+  gitUnstage: (file) => ipcRenderer.invoke(IpcRequest.GitUnstage, file),
+  gitCommit: (message) => ipcRenderer.invoke(IpcRequest.GitCommit, message),
+  gitCurrentBranch: () => ipcRenderer.invoke(IpcRequest.GitCurrentBranch),
+  gitListBranches: () => ipcRenderer.invoke(IpcRequest.GitListBranches),
+  gitCheckout: (branch) => ipcRenderer.invoke(IpcRequest.GitCheckout, branch),
+  gitDiff: (file, staged) => ipcRenderer.invoke(IpcRequest.GitDiff, file, staged),
+  gitLog: (limit) => ipcRenderer.invoke(IpcRequest.GitLog, limit),
+  gitCommitDiff: (hash) => ipcRenderer.invoke(IpcRequest.GitCommitDiff, hash),
+
+  // ── CodeGraph index library ──────────────────────────────────
+  codegraphList: () => ipcRenderer.invoke(IpcRequest.CodegraphList),
+  codegraphReindex: (root) => ipcRenderer.invoke(IpcRequest.CodegraphReindex, root),
+
+  // ── MCP management (plugin module) ─────────────────────────────
+  pluginMcpList: () => ipcRenderer.invoke(IpcRequest.PluginMcpList),
+  pluginSetMcpEnabled: (name, enabled) => ipcRenderer.invoke(IpcRequest.PluginSetMcpEnabled, name, enabled),
+
+  // ── Agent changes ───────────────────────────────────────────────────────
+  agentChangesList: (sessionId) => ipcRenderer.invoke(IpcRequest.AgentChangesList, sessionId),
+  agentChangesDiff: (sessionId, file) => ipcRenderer.invoke(IpcRequest.AgentChangesDiff, sessionId, file),
 };
 
 contextBridge.exposeInMainWorld("deepcode", api);

@@ -5,15 +5,32 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { setShellIfWindows } from "@vegamo/deepcode-core";
+import {
+  setShellIfWindows,
+  configureCodegraphVendorRoot,
+  hasCodegraphProject,
+  runCodegraphInit,
+  runCodegraphSync,
+} from "@vegamo/deepcode-core";
 import type { ModelConfigSelection, UserPromptContent } from "@vegamo/deepcode-core";
 import { IpcEvent, IpcRequest } from "../shared/ipc.js";
-import type { EditableSettings, UndoRestoreMode } from "../shared/ipc.js";
+import type { CodegraphIndexEntry, EditableSettings, UndoRestoreMode } from "../shared/ipc.js";
 import { SessionBridge } from "./session-bridge.js";
+import { applyAppIcon } from "./app-icon.js";
 import { PluginManager, type PluginEventCallback } from "./plugin-manager.js";
 import { scanFiles } from "./file-scanner.js";
+import { listWorkspaceSessions } from "./workspace-registry.js";
+import { archiveSession, unarchiveSession } from "./archive-store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Product/brand name — drives the macOS menu-bar app name and Windows taskbar grouping.
+app.setName("orca");
+
+// Point the CodeGraph resolver at the copy we vendor next to the built app
+// (packages/desktop/vendor/codegraph). When absent (not yet vendored), the core
+// resolver transparently falls back to `npx @colbymchenry/codegraph`.
+configureCodegraphVendorRoot(join(__dirname, "..", "vendor", "codegraph"));
 
 // Deep Code's bash tool relies on a POSIX shell; on Windows this resolves Git Bash.
 process.env.NoDefaultCurrentDirectoryInExePath = "1";
@@ -25,6 +42,19 @@ try {
 }
 
 let mainWindow: BrowserWindow | null = null;
+
+// Dev-only platform override so `npm run desktop:startWin|startMac|startLx` can
+// preview another OS's theme + interaction adaptation without a real machine.
+// Honored only in an unpackaged (dev) build; production always reports the real OS.
+function resolvePlatform(): string {
+  if (!app.isPackaged) {
+    const override = process.env.DEEPCODE_PLATFORM;
+    if (override === "win32" || override === "darwin" || override === "linux") {
+      return override;
+    }
+  }
+  return process.platform;
+}
 let bridge: SessionBridge | null = null;
 let pluginManager: PluginManager | null = null;
 
@@ -63,14 +93,14 @@ function getPluginManager(): PluginManager {
 }
 
 function createWindow(): void {
-  const isWin = process.platform === "win32";
+  const isWin = resolvePlatform() === "win32";
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 820,
     minWidth: 720,
     minHeight: 480,
     backgroundColor: isWin ? "#1d1d1d" : "#e7ecf2",
-    title: "Deep Code",
+    title: "orca",
     autoHideMenuBar: true,
     // frame:false 已隐藏原生标题栏和红绿灯(macOS)/标题栏(Windows)。
     // 不再设置 titleBarStyle — 它会导致 macOS 原生 traffic lights 仍然显示。
@@ -84,6 +114,9 @@ function createWindow(): void {
   });
 
   void mainWindow.loadFile(join(__dirname, "renderer/index.html"));
+
+  // Rasterize + apply the orca brand icon (window/taskbar/dock). Best-effort.
+  void applyAppIcon(mainWindow);
 
   if (process.env.NODE_ENV === "development") {
     mainWindow.webContents.openDevTools({ mode: "detach" });
@@ -101,7 +134,7 @@ function registerIpc(): void {
 
   handle(IpcRequest.Ready, () => ({
     projectRoot: getBridge().projectRoot,
-    platform: process.platform,
+    platform: resolvePlatform(),
   }));
   handle(IpcRequest.GetProjectRoot, () => getBridge().projectRoot);
 
@@ -185,21 +218,70 @@ function registerIpc(): void {
     getPluginManager().searchSkills(query, sessionId)
   );
   handle(IpcRequest.PluginRefreshSkills, (sessionId?: string) => getPluginManager().refreshSkills(sessionId));
+  handle(IpcRequest.PluginReadSkillDoc, (path: string) => getPluginManager().readSkillDoc(path));
   handle(
     IpcRequest.PluginUpsertMcpServer,
-    async (name: string, command: string, args?: string[], env?: Record<string, string>) => {
-      const config = { command, args, env };
-      await getPluginManager().upsertMcpServer(name, config);
-    }
+    (name: string, command: string, args?: string[], env?: Record<string, string>) =>
+      getBridge().pluginUpsertMcpServer(name, command, args, env)
   );
-  handle(IpcRequest.PluginRemoveMcpServer, async (name: string) => {
-    await getPluginManager().removeMcpServer(name);
-  });
+  handle(IpcRequest.PluginRemoveMcpServer, (name: string) => getBridge().pluginRemoveMcpServer(name));
 
   // ── File scanner (for @file mentions) ────────────────────────────────────
   handle(IpcRequest.ScanFiles, (query: string) => {
     return scanFiles(getBridge().projectRoot, query);
   });
+
+  // ── Workspace-grouped sessions + archive ──────────────────────────────────
+  handle(IpcRequest.WorkspaceListSessions, () => listWorkspaceSessions(getBridge().projectRoot));
+  handle(IpcRequest.SessionArchive, (id: string) => {
+    archiveSession(id);
+  });
+  handle(IpcRequest.SessionUnarchive, (id: string) => {
+    unarchiveSession(id);
+  });
+
+  // ── Git source control ────────────────────────────────────────────────────
+  handle(IpcRequest.GitStatus, () => getBridge().gitStatus());
+  handle(IpcRequest.GitStage, (file: string) => getBridge().gitStage(file));
+  handle(IpcRequest.GitUnstage, (file: string) => getBridge().gitUnstage(file));
+  handle(IpcRequest.GitCommit, (message: string) => getBridge().gitCommit(message));
+  handle(IpcRequest.GitCurrentBranch, () => getBridge().gitCurrentBranch());
+  handle(IpcRequest.GitListBranches, () => getBridge().gitListBranches());
+  handle(IpcRequest.GitCheckout, (branch: string) => getBridge().gitCheckout(branch));
+  handle(IpcRequest.GitDiff, (file: string, staged: boolean) => getBridge().gitDiff(file, staged));
+  handle(IpcRequest.GitLog, (limit?: number) => getBridge().gitLog(limit));
+  handle(IpcRequest.GitCommitDiff, (hash: string) => getBridge().gitCommitDiff(hash));
+
+  // ── CodeGraph index library ───────────────────────────────────────────────
+  handle(IpcRequest.CodegraphList, (): CodegraphIndexEntry[] => {
+    const { workspaces } = listWorkspaceSessions(getBridge().projectRoot);
+    return workspaces.map((w) => ({
+      root: w.root,
+      label: w.label,
+      initialized: hasCodegraphProject(w.root),
+    }));
+  });
+  handle(IpcRequest.CodegraphReindex, (root: string) => {
+    const initialized = hasCodegraphProject(root);
+    if (initialized) {
+      runCodegraphSync(root);
+      return { ok: true, action: "index" as const };
+    }
+    runCodegraphInit(root);
+    return { ok: true, action: "init" as const };
+  });
+
+  // ── MCP management (plugin module) ────────────────────────────────────────
+  handle(IpcRequest.PluginMcpList, () => getBridge().pluginMcpList());
+  handle(IpcRequest.PluginSetMcpEnabled, (name: string, enabled: boolean) =>
+    getBridge().pluginSetMcpEnabled(name, enabled)
+  );
+
+  // ── Agent changes ─────────────────────────────────────────────────────────
+  handle(IpcRequest.AgentChangesList, (sessionId: string) => getBridge().agentChangesList(sessionId));
+  handle(IpcRequest.AgentChangesDiff, (sessionId: string, file: string) =>
+    getBridge().agentChangesDiff(sessionId, file)
+  );
 }
 
 app.whenReady().then(() => {

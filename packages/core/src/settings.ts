@@ -20,6 +20,7 @@ export type McpServerConfig = {
   command: string;
   args?: string[];
   env?: Record<string, string>;
+  cwd?: string;
 };
 
 export type PermissionScope =
@@ -452,6 +453,10 @@ function mergeMcpServers(
       command,
       args: projectConfig?.args ?? userConfig?.args,
     };
+    const cwd = projectConfig?.cwd ?? userConfig?.cwd;
+    if (cwd) {
+      config.cwd = cwd;
+    }
     if (Object.keys(env).length > 0) {
       config.env = env;
     }

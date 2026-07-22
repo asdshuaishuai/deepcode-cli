@@ -1,9 +1,26 @@
-import { marked } from "marked";
+import { marked, type Tokens } from "marked";
+
+/** Pretty-print fenced ```json blocks so model output reads cleanly. */
+function prettyPrintJsonBlocks(token: Tokens.Generic): void {
+  if (token.type !== "code") return;
+  const code = token as Tokens.Code;
+  const lang = (code.lang ?? "").trim().toLowerCase();
+  if (lang !== "json" && lang !== "jsonc") return;
+  try {
+    code.text = JSON.stringify(JSON.parse(code.text), null, 2);
+  } catch {
+    // Leave malformed JSON untouched.
+  }
+}
 
 marked.setOptions({
   gfm: true,
   breaks: true,
 });
+
+// Default marked emits `<pre><code class="language-xxx">` for fenced blocks,
+// which our CSS uses to style/label code. We only reflow JSON here.
+marked.use({ walkTokens: prettyPrintJsonBlocks });
 
 /**
  * Render markdown to a sanitized-enough HTML string for our trusted CSP.

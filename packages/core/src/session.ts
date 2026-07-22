@@ -6,6 +6,13 @@ import matter from "gray-matter";
 import ejs from "ejs";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { launchNotifyScript } from "./common/notify";
+import {
+  buildCodegraphMcpServerConfig,
+  CODEGRAPH_MCP_SERVER_NAME,
+  hasCodegraphProject,
+  isCodegraphDisabled,
+  runCodegraphSync,
+} from "./common/codegraph";
 import { buildThinkingRequestOptions } from "./common/openai-thinking";
 import { DEEPSEEK_V4_MODELS } from "./common/model-capabilities";
 import { readTextFileWithMetadata } from "./common/file-utils";
@@ -354,6 +361,8 @@ export class SessionManager {
   private readonly toolExecutor: ToolExecutor;
   private readonly mcpManager = new McpManager();
   private mcpToolDefinitions: ToolDefinition[] = [];
+  /** Sessions that mutated files during the current turn and need a CodeGraph index sync. */
+  private readonly codegraphDirtySessions = new Set<string>();
   private readonly messageConverter: OpenAIMessageConverter;
 
   constructor(options: SessionManagerOptions) {
@@ -366,7 +375,7 @@ export class SessionManager {
     this.onMcpStatusChanged = options.onMcpStatusChanged;
     this.onProcessStdout = options.onProcessStdout;
     this.toolExecutor = new ToolExecutor(this.projectRoot, this.createOpenAIClient, this.mcpManager);
-    this.mcpManager.prepare(this.getResolvedSettings().mcpServers);
+    this.mcpManager.prepare(this.augmentMcpServersWithBuiltins(this.getResolvedSettings().mcpServers));
     this.messageConverter = new OpenAIMessageConverter({
       renderInitPrompt: () => this.renderInitCommandPrompt(),
     });
@@ -384,6 +393,30 @@ export class SessionManager {
     return this.messageConverter.buildMessages(messages, thinkingEnabled, model);
   }
 
+  /**
+   * Merge built-in MCP servers into the configured set. CodeGraph is registered
+   * automatically — but only for projects that already contain a `.codegraph/`
+   * directory, so the index/knowledge base stays project-scoped and nothing is
+   * assumed to exist on the host. A user-provided `codegraph` entry always wins.
+   */
+  private augmentMcpServersWithBuiltins(
+    servers?: Record<string, McpServerConfig>
+  ): Record<string, McpServerConfig> | undefined {
+    if (!hasCodegraphProject(this.projectRoot)) {
+      return servers;
+    }
+    if (isCodegraphDisabled(this.projectRoot)) {
+      return servers;
+    }
+    if (servers && Object.prototype.hasOwnProperty.call(servers, CODEGRAPH_MCP_SERVER_NAME)) {
+      return servers;
+    }
+    return {
+      ...(servers ?? {}),
+      [CODEGRAPH_MCP_SERVER_NAME]: buildCodegraphMcpServerConfig(this.projectRoot),
+    };
+  }
+
   async initMcpServers(servers?: Record<string, McpServerConfig>): Promise<void> {
     this.mcpManager.setOnToolsListChanged(() => {
       this.mcpToolDefinitions = this.mcpManager.getMcpToolDefinitions();
@@ -392,7 +425,7 @@ export class SessionManager {
     this.mcpManager.setOnStatusChanged(() => {
       this.onMcpStatusChanged?.();
     });
-    await this.mcpManager.initialize(servers);
+    await this.mcpManager.initialize(this.augmentMcpServersWithBuiltins(servers));
     this.mcpToolDefinitions = this.mcpManager.getMcpToolDefinitions();
   }
 
@@ -897,6 +930,16 @@ ${agentInstructions}
     }
 
     return Array.from(skillsByName.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Read the raw SKILL.md markdown for a skill by its (display) `path` — the same
+   * value surfaced on SkillInfo. The desktop plugin center renders this document.
+   * Resolution reuses resolveSkillPath so bundled/home/project display paths all
+   * map back to a real file (with the bundled-traversal guard preserved).
+   */
+  readSkillDocument(skillPath: string): string {
+    return fs.readFileSync(this.resolveSkillPath(skillPath), "utf8");
   }
 
   private resolveSkillPath(skillPath: string): string {
@@ -1519,6 +1562,7 @@ ${agentInstructions}
         this.sessionControllers.delete(sessionId);
       }
       this.maybeNotifyTaskCompletion(sessionId, notify, startedAt, env);
+      this.maybeSyncCodegraphIndex(sessionId);
     }
   }
 
@@ -1925,6 +1969,21 @@ ${agentInstructions}
     const fileHistory = this.getFileHistory();
     fileHistory.ensureSession(sessionId);
     fileHistory.recordCheckpoint(sessionId, [filePath], "File mutation checkpoint");
+    // Remember that this turn changed files so we can refresh the CodeGraph index
+    // once the turn settles (see maybeSyncCodegraphIndex).
+    this.codegraphDirtySessions.add(sessionId);
+  }
+
+  /**
+   * After a task turn ends, run an incremental CodeGraph index update if this turn
+   * mutated files. Fire-and-forget and gated on the project being CodeGraph-enabled;
+   * runCodegraphSync no-ops otherwise.
+   */
+  private maybeSyncCodegraphIndex(sessionId: string): void {
+    if (!this.codegraphDirtySessions.delete(sessionId)) {
+      return;
+    }
+    runCodegraphSync(this.projectRoot);
   }
 
   private updateLatestUserCheckpointHash(sessionId: string, previousHash: string | undefined, nextHash: string): void {

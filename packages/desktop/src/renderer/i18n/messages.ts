@@ -1,7 +1,12 @@
-// Bilingual (English / Chinese) message catalog for the desktop renderer.
-// `en` is the source of truth; `zh` must provide the same keys (enforced by the
-// `Record<MessageKey, string>` type). Values may contain `{name}` placeholders
-// that are substituted at call time.
+// Multilingual message catalog for the desktop renderer. `en` is the source of
+// truth; every other locale is a `Record<MessageKey, string>` (completeness is
+// enforced by the type). Values may contain `{name}`/`{n}` placeholders that are
+// substituted at call time. Non-English catalogs live in sibling locale files.
+
+import { zhTW } from "./locales/zh-tw.js";
+import { zhHK } from "./locales/zh-hk.js";
+import { ja } from "./locales/ja.js";
+import { ko } from "./locales/ko.js";
 
 export const en = {
   // ── Common ────────────────────────────────────────────────
@@ -142,6 +147,22 @@ export const en = {
   "plugins.skills.none": "No skills found. Place a SKILL.md inside the .deepcode/skills/ directory.",
   "plugins.skills.loaded": "loaded",
   "plugins.skills.attach": "Attach to prompt",
+  "plugins.skills.locations":
+    "Skills load from .deepcode/skills or .agents/skills (project or home). Add a folder with SKILL.md, then Refresh.",
+  "plugins.mcp.presets": "Quick add",
+  "plugins.detail.empty": "Select a plugin on the left to view its details.",
+  "plugins.detail.overview": "Overview",
+  "plugins.detail.source": "Source",
+  "plugins.detail.capabilities": "Capabilities",
+  "plugins.detail.author": "Author",
+  "plugins.detail.repository": "Repository",
+  "plugins.detail.tools": "Tools",
+  "plugins.detail.prompts": "Prompts",
+  "plugins.detail.resources": "Resources",
+  "plugins.detail.noCapabilities": "Not connected. Enable the server to discover its capabilities.",
+  "plugins.detail.doc": "Documentation",
+  "plugins.detail.docError": "Could not read SKILL.md.",
+  "context.compaction": "Context",
 
   // ── Model modal ───────────────────────────────────────────
   "model.title": "Model settings",
@@ -149,9 +170,9 @@ export const en = {
   "model.custom": "Custom (OpenAI-compatible)…",
   "model.customName": "Custom model name",
   "model.thinking": "Thinking",
-  "model.thinkingMax": "Thinking mode [max]",
-  "model.thinkingHigh": "Thinking mode [high]",
-  "model.noThinking": "No thinking",
+  "model.thinkingMax": "Max",
+  "model.thinkingHigh": "High",
+  "model.noThinking": "Disable thinking",
   "model.baseUrlKey": "Base URL: {url} · API key: {status}",
   "model.configured": "configured",
   "model.missing": "missing",
@@ -223,6 +244,8 @@ export const en = {
   // ── Appearance / reasoning (top bar) ──────────────────────
   "topbar.appearanceLight": "Light appearance — click for dark",
   "topbar.appearanceDark": "Dark appearance — click for light",
+  "topbar.themeGlass": "Glass theme — click for native",
+  "topbar.themeNative": "Native theme — click for Glass",
   "topbar.reasoningNormal": "Reasoning: collapsed — click to expand",
   "topbar.reasoningExpanded": "Reasoning: expanded — click to hide",
   "topbar.reasoningHidden": "Reasoning: hidden — click to collapse",
@@ -283,10 +306,105 @@ export const en = {
   "tokens.colReqs": "Reqs",
   "tokens.emptyTitle": "No token usage yet",
   "tokens.emptyHint": "Run a prompt and usage will appear here.",
+
+  // ── Activity bar / main views (VSCode-style) ──────────────
+  "rail.tasks": "Tasks",
+  "rail.git": "Source Control",
+  "view.diff": "Diff",
+
+  // ── Workspace tree ────────────────────────────────────────
+  "workspace.archivedGroup": "Archived",
+  "workspace.archive": "Archive",
+  "workspace.unarchive": "Unarchive",
+  "workspace.empty": "No sessions in this workspace.",
+
+  // ── Task panel ────────────────────────────────────────────
+  "task.title": "Plan",
+  "task.empty": "No active plan yet. Ask Deep Code to draft one.",
+
+  // ── Source control panel ──────────────────────────────────
+  "scm.title": "Source Control",
+  "scm.branch": "Branch",
+  "scm.noRepo": "This workspace is not a Git repository.",
+  "scm.noChanges": "No changes.",
+  "scm.stagedChanges": "Staged Changes",
+  "scm.changes": "Changes",
+  "scm.stage": "Stage",
+  "scm.unstage": "Unstage",
+  "scm.commit": "Commit",
+  "scm.commitPlaceholder": "Commit message…",
+  "scm.refresh": "Refresh",
+  "scm.commitEmpty": "Enter a commit message first.",
+
+  // ── Diff panel ────────────────────────────────────────────
+  "diff.title": "Diff",
+  "diff.gitTab": "Git Working Tree",
+  "diff.agentTab": "Agent Changes",
+  "diff.noDiff": "No diff to display.",
+  "diff.selectFile": "Select a file to view its diff.",
+  "diff.binary": "Binary file — diff not shown.",
+  "diff.noAgentChanges": "No agent file changes in this session.",
+
+  // ── deepStudio branding + new features ────────────────────
+  "app.name": "orca",
+  "topbar.branch": "Branch",
+  "topbar.noBranch": "No branch",
+  "topbar.thinkingModel": "Thinking",
+  "topbar.contextTokens": "Context",
+  "topbar.workspaceTokens": "Workspace",
+  "topbar.tokenPanelTitle": "Token usage — click for details",
+  "sidebar.newWorkspace": "New Workspace",
+  "workspace.newSession": "New Session",
+  "settings.tab.tokens": "Token Usage",
+  "tokens.byWorkspace": "By workspace",
+  "tokens.byTime": "By time window",
+  "tokens.last5h": "Last 5 hours",
+  "tokens.today": "Today",
+  "tokens.thisWeek": "This week",
+  "tokens.approxNote":
+    "These are approximate time-based figures attributed by each session's last activity time — not exact per-request usage.",
+  "tokens.colWorkspace": "Workspace",
+  "tokens.workspaceTotal": "This workspace",
+  "tokens.overall": "All workspaces",
+  "plugins.mcpSection": "MCP Servers",
+  "plugins.skillsSection": "Skills",
+  "composer.targetMode": "Target mode",
+  "composer.targetModeHint": "Target mode is not available yet (backend CLI pending).",
+  "composer.builtinCommands": "Built-in commands",
+
+  // ── Index library (CodeGraph) ─────────────────────────────
+  "rail.index": "Index Library",
+  "index.title": "Index Library",
+  "index.empty": "No workspaces to index.",
+  "index.indexed": "Indexed",
+  "index.uninitialized": "Not indexed",
+  "index.reindex": "Reset index",
+  "index.reindexing": "Indexing…",
+  "scm.history": "History",
+  "scm.noHistory": "No commits yet.",
+  "mcp.add": "Add Server",
+  "mcp.builtin": "Built-in",
+  "mcp.disabledNote": "Disabled",
+  "mcp.name": "Name",
+  "mcp.command": "Command",
+  "mcp.args": "Args (space-separated)",
+  "mcp.env": "Env (KEY=VALUE per line)",
+  "mcp.save": "Add",
+  "mcp.enableTitle": "Enable server",
+  "mcp.removeTitle": "Remove server",
+  "tokens.currentWorkspace": "Current workspace",
+
+  // ── Language names (settings language switcher) ───────────
+  "lang.en": "English",
+  "lang.zh": "简体中文",
+  "lang.zh-TW": "繁體中文（台灣）",
+  "lang.zh-HK": "繁體中文（香港）",
+  "lang.ja": "日本語",
+  "lang.ko": "한국어",
 } as const;
 
 export type MessageKey = keyof typeof en;
-export type Locale = "en" | "zh";
+export type Locale = "en" | "zh" | "zh-TW" | "zh-HK" | "ja" | "ko";
 
 export const zh: Record<MessageKey, string> = {
   // ── Common ────────────────────────────────────────────────
@@ -427,6 +545,22 @@ export const zh: Record<MessageKey, string> = {
   "plugins.skills.none": "未发现技能。将 SKILL.md 放入 .deepcode/skills/ 目录即可。",
   "plugins.skills.loaded": "已加载",
   "plugins.skills.attach": "附加到提示",
+  "plugins.skills.locations":
+    "技能会从 .deepcode/skills 或 .agents/skills（项目或用户目录）加载。新建含 SKILL.md 的文件夹后点击刷新。",
+  "plugins.mcp.presets": "快速添加",
+  "plugins.detail.empty": "在左侧选择一个插件以查看详情。",
+  "plugins.detail.overview": "概览",
+  "plugins.detail.source": "来源",
+  "plugins.detail.capabilities": "能力",
+  "plugins.detail.author": "作者",
+  "plugins.detail.repository": "仓库",
+  "plugins.detail.tools": "工具",
+  "plugins.detail.prompts": "提示",
+  "plugins.detail.resources": "资源",
+  "plugins.detail.noCapabilities": "未连接。启用该服务器后可发现其能力。",
+  "plugins.detail.doc": "说明文档",
+  "plugins.detail.docError": "无法读取 SKILL.md。",
+  "context.compaction": "上下文",
 
   // ── Model modal ───────────────────────────────────────────
   "model.title": "模型设置",
@@ -434,9 +568,9 @@ export const zh: Record<MessageKey, string> = {
   "model.custom": "自定义（OpenAI 兼容）…",
   "model.customName": "自定义模型名称",
   "model.thinking": "思考",
-  "model.thinkingMax": "思考模式 [max]",
-  "model.thinkingHigh": "思考模式 [high]",
-  "model.noThinking": "不思考",
+  "model.thinkingMax": "最高",
+  "model.thinkingHigh": "高",
+  "model.noThinking": "关闭思考",
   "model.baseUrlKey": "Base URL：{url} · API Key：{status}",
   "model.configured": "已配置",
   "model.missing": "未配置",
@@ -507,6 +641,8 @@ export const zh: Record<MessageKey, string> = {
   // ── Appearance / reasoning (top bar) ──────────────────────
   "topbar.appearanceLight": "浅色外观 — 点击切换深色",
   "topbar.appearanceDark": "深色外观 — 点击切换浅色",
+  "topbar.themeGlass": "毛玻璃主题 — 点击切换原生",
+  "topbar.themeNative": "原生主题 — 点击切换毛玻璃",
   "topbar.reasoningNormal": "推理：已折叠 — 点击展开",
   "topbar.reasoningExpanded": "推理：已展开 — 点击隐藏",
   "topbar.reasoningHidden": "推理：已隐藏 — 点击折叠",
@@ -567,6 +703,107 @@ export const zh: Record<MessageKey, string> = {
   "tokens.colReqs": "请求",
   "tokens.emptyTitle": "暂无 Token 消耗",
   "tokens.emptyHint": "发起一次对话后，消耗数据将显示在这里。",
+
+  // ── Activity bar / main views (VSCode-style) ──────────────
+  "rail.tasks": "任务",
+  "rail.git": "源代码管理",
+  "view.diff": "差异",
+
+  // ── Workspace tree ────────────────────────────────────────
+  "workspace.archivedGroup": "已归档",
+  "workspace.archive": "归档",
+  "workspace.unarchive": "取消归档",
+  "workspace.empty": "此工作区暂无会话。",
+
+  // ── Task panel ────────────────────────────────────────────
+  "task.title": "计划",
+  "task.empty": "暂无进行中的计划。让 Deep Code 起草一份吧。",
+
+  // ── Source control panel ──────────────────────────────────
+  "scm.title": "源代码管理",
+  "scm.branch": "分支",
+  "scm.noRepo": "此工作区不是 Git 仓库。",
+  "scm.noChanges": "没有更改。",
+  "scm.stagedChanges": "已暂存的更改",
+  "scm.changes": "更改",
+  "scm.stage": "暂存",
+  "scm.unstage": "取消暂存",
+  "scm.commit": "提交",
+  "scm.commitPlaceholder": "提交信息…",
+  "scm.refresh": "刷新",
+  "scm.commitEmpty": "请先输入提交信息。",
+
+  // ── Diff panel ────────────────────────────────────────────
+  "diff.title": "差异",
+  "diff.gitTab": "Git 工作区",
+  "diff.agentTab": "Agent 改动",
+  "diff.noDiff": "没有可显示的差异。",
+  "diff.selectFile": "选择一个文件以查看其差异。",
+  "diff.binary": "二进制文件 — 不显示差异。",
+  "diff.noAgentChanges": "本会话没有 Agent 文件改动。",
+
+  // ── deepStudio branding + new features ────────────────────
+  "app.name": "orca",
+  "topbar.branch": "分支",
+  "topbar.noBranch": "无分支",
+  "topbar.thinkingModel": "思考模型",
+  "topbar.contextTokens": "上下文",
+  "topbar.workspaceTokens": "工作区",
+  "topbar.tokenPanelTitle": "Token 消耗 — 点击查看详情",
+  "sidebar.newWorkspace": "新建工作区",
+  "workspace.newSession": "新建会话",
+  "settings.tab.tokens": "Token 消耗",
+  "tokens.byWorkspace": "按工作区",
+  "tokens.byTime": "按时间维度",
+  "tokens.last5h": "近 5 小时",
+  "tokens.today": "今日",
+  "tokens.thisWeek": "本周",
+  "tokens.approxNote": "该统计为近似时间统计消耗，非标准消耗：按每个会话的最近活动时间归因，并非逐次请求的精确用量。",
+  "tokens.colWorkspace": "工作区",
+  "tokens.workspaceTotal": "本工作区",
+  "tokens.overall": "全部工作区",
+  "plugins.mcpSection": "MCP 服务器",
+  "plugins.skillsSection": "技能",
+  "composer.targetMode": "目标模式",
+  "composer.targetModeHint": "目标模式尚未可用（底层 CLI 待实现）。",
+  "composer.builtinCommands": "内置命令",
+
+  // ── Index library (CodeGraph) ─────────────────────────────
+  "rail.index": "索引库",
+  "index.title": "索引库",
+  "index.empty": "暂无可索引的工作区。",
+  "index.indexed": "已索引",
+  "index.uninitialized": "未索引",
+  "index.reindex": "重置索引",
+  "index.reindexing": "正在索引…",
+  "scm.history": "历史记录",
+  "scm.noHistory": "暂无提交记录。",
+  "mcp.add": "添加服务器",
+  "mcp.builtin": "内置",
+  "mcp.disabledNote": "已禁用",
+  "mcp.name": "名称",
+  "mcp.command": "命令",
+  "mcp.args": "参数（空格分隔）",
+  "mcp.env": "环境变量（每行 KEY=VALUE）",
+  "mcp.save": "添加",
+  "mcp.enableTitle": "启用服务器",
+  "mcp.removeTitle": "移除服务器",
+  "tokens.currentWorkspace": "当前工作区",
+
+  // ── Language names (settings language switcher) ───────────
+  "lang.en": "English",
+  "lang.zh": "简体中文",
+  "lang.zh-TW": "繁體中文（台灣）",
+  "lang.zh-HK": "繁體中文（香港）",
+  "lang.ja": "日本語",
+  "lang.ko": "한국어",
 };
 
-export const messages: Record<Locale, Record<MessageKey, string>> = { en, zh };
+export const messages: Record<Locale, Record<MessageKey, string>> = {
+  en,
+  zh,
+  "zh-TW": zhTW,
+  "zh-HK": zhHK,
+  ja,
+  ko,
+};

@@ -1,15 +1,26 @@
-import { useMemo, useState, type JSX } from "react";
-import type { SerializableSessionEntry } from "../../shared/ipc";
+import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
+import type { SerializableSessionEntry, WorkspaceSessions } from "../../shared/ipc";
+import { api } from "../api";
 import { useI18n, type MessageKey, type Translate } from "../i18n";
 import { Button, IconButton, Input, StatusDot } from "../ui/index";
+import { aggregateByWorkspace, aggregateUsage, formatTokens } from "../lib/token-usage";
 
 type Props = {
-  sessions: SerializableSessionEntry[];
   activeId: string | null;
-  onSelect: (id: string) => void;
+  currentRoot: string;
+  /** Bumped by the parent to force a reload of the workspace tree. */
+  refreshKey: number;
+  /** Current workspace sessions (used for the token summary footer). */
+  sessions: SerializableSessionEntry[];
+  onSelectSession: (root: string, id: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, summary: string) => void;
+  onArchive: (id: string) => void;
+  onUnarchive: (id: string) => void;
   onCollapse: () => void;
+  onNewWorkspace: () => void;
+  onNewSessionInWorkspace: (root: string) => void;
+  onOpenTokens: () => void;
 };
 
 const KNOWN_STATUSES = new Set([
@@ -27,55 +38,61 @@ function statusLabel(status: string, t: Translate): string {
   return KNOWN_STATUSES.has(status) ? t(`status.${status}` as MessageKey) : status;
 }
 
-function relativeTime(iso: string, t: Translate): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) {
-    return "";
-  }
-  const diff = Date.now() - then;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return t("time.justNow");
-  if (mins < 60) return t("time.minutesAgo", { n: mins });
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return t("time.hoursAgo", { n: hours });
-  return t("time.daysAgo", { n: Math.floor(hours / 24) });
-}
+const EMPTY: WorkspaceSessions = { workspaces: [], archived: [] };
 
-function highlightText(text: string, query: string): JSX.Element {
-  if (!query.trim()) return <>{text}</>;
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+function matchesQuery(entry: SerializableSessionEntry, q: string): boolean {
+  if (!q) return true;
   return (
-    <>
-      {parts.map((part, i) =>
-        part.toLowerCase() === query.toLowerCase() ? (
-          <mark key={i} className="ui-highlight">
-            {part}
-          </mark>
-        ) : (
-          part
-        )
-      )}
-    </>
+    (entry.summary ?? "").toLowerCase().includes(q) ||
+    entry.id.toLowerCase().includes(q) ||
+    entry.status.toLowerCase().includes(q)
   );
 }
 
-export function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onCollapse }: Props): JSX.Element {
+export function Sidebar({
+  activeId,
+  currentRoot,
+  refreshKey,
+  sessions,
+  onSelectSession,
+  onDelete,
+  onRename,
+  onArchive,
+  onUnarchive,
+  onCollapse,
+  onNewWorkspace,
+  onNewSessionInWorkspace,
+  onOpenTokens,
+}: Props): JSX.Element {
   const { t } = useI18n();
+  const [tree, setTree] = useState<WorkspaceSessions>(EMPTY);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const [archivedOpen, setArchivedOpen] = useState(false);
 
-  const filteredSessions = useMemo(() => {
-    if (!searchQuery.trim()) return sessions;
-    const q = searchQuery.toLowerCase();
-    return sessions.filter(
-      (s) =>
-        (s.summary ?? "").toLowerCase().includes(q) ||
-        s.id.toLowerCase().includes(q) ||
-        s.status.toLowerCase().includes(q)
-    );
-  }, [sessions, searchQuery]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const data = await api.listWorkspaceSessions();
+      if (!cancelled) setTree(data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  const q = searchQuery.trim().toLowerCase();
+
+  const toggleCollapse = useCallback((root: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(root)) next.delete(root);
+      else next.add(root);
+      return next;
+    });
+  }, []);
 
   function beginRename(entry: SerializableSessionEntry): void {
     setEditingId(entry.id);
@@ -90,13 +107,80 @@ export function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onCo
     setEditingId(null);
   }
 
+  const workspaces = useMemo(
+    () =>
+      tree.workspaces
+        .map((w) => ({ ...w, sessions: w.sessions.filter((s) => matchesQuery(s, q)) }))
+        .filter((w) => !q || w.sessions.length > 0),
+    [tree.workspaces, q]
+  );
+
+  const archived = useMemo(() => tree.archived.filter((a) => matchesQuery(a.session, q)), [tree.archived, q]);
+
+  // Token summary footer figures: current workspace total + all workspaces.
+  const currentTotal = useMemo(() => aggregateUsage(sessions).totals.total, [sessions]);
+  const overallTotal = useMemo(() => aggregateByWorkspace(tree).reduce((sum, row) => sum + row.total, 0), [tree]);
+
+  function renderSession(root: string, entry: SerializableSessionEntry): JSX.Element {
+    const isActive = entry.id === activeId;
+    return (
+      <div
+        key={entry.id}
+        className={`ui-session-item ui-tree-session${isActive ? " active" : ""}`}
+        onClick={() => onSelectSession(root, entry.id)}
+      >
+        {editingId === entry.id ? (
+          <Input
+            type="text"
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onBlur={() => commitRename(entry.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename(entry.id);
+              if (e.key === "Escape") setEditingId(null);
+            }}
+          />
+        ) : (
+          <div className="ui-session-title">
+            <span className="ui-tree-icon">💬</span>
+            {entry.summary || t("sidebar.untitled")}
+          </div>
+        )}
+        <div className="ui-session-meta">
+          <StatusDot status={entry.status} />
+          <span>{statusLabel(entry.status, t)}</span>
+        </div>
+        {isActive && editingId !== entry.id ? (
+          <div className="ui-session-actions" onClick={(e) => e.stopPropagation()}>
+            <Button size="sm" variant="subtle" onClick={() => beginRename(entry)}>
+              {t("sidebar.rename")}
+            </Button>
+            <Button size="sm" variant="subtle" onClick={() => onArchive(entry.id)}>
+              {t("workspace.archive")}
+            </Button>
+            <Button size="sm" variant="subtle" onClick={() => onDelete(entry.id)}>
+              {t("sidebar.delete")}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="ui-session-panel">
       <div className="ui-session-panel-head">
         <span>{t("sidebar.sessions")}</span>
-        <IconButton onClick={onCollapse} title={t("sessionPanel.collapse")} aria-label={t("sessionPanel.collapse")}>
-          ⟨
-        </IconButton>
+        <div className="ui-session-panel-head-actions">
+          <IconButton onClick={onNewWorkspace} title={t("sidebar.newWorkspace")} aria-label={t("sidebar.newWorkspace")}>
+            ＋
+          </IconButton>
+          <IconButton onClick={onCollapse} title={t("sessionPanel.collapse")} aria-label={t("sessionPanel.collapse")}>
+            ⟨
+          </IconButton>
+        </div>
       </div>
 
       <div className="ui-session-search">
@@ -109,53 +193,94 @@ export function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onCo
       </div>
 
       <div className="ui-session-list">
-        {filteredSessions.length === 0 ? (
+        {workspaces.length === 0 && archived.length === 0 ? (
           <div className="ui-session-empty">{searchQuery ? t("sidebar.noResults") : t("sidebar.none")}</div>
         ) : null}
-        {filteredSessions.map((entry) => (
-          <div
-            key={entry.id}
-            className={`ui-session-item${entry.id === activeId ? " active" : ""}`}
-            onClick={() => onSelect(entry.id)}
-          >
-            {editingId === entry.id ? (
-              <Input
-                type="text"
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                onBlur={() => commitRename(entry.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitRename(entry.id);
-                  if (e.key === "Escape") setEditingId(null);
-                }}
-              />
-            ) : (
-              <div className="ui-session-title">
-                {searchQuery
-                  ? highlightText(entry.summary || t("sidebar.untitled"), searchQuery)
-                  : entry.summary || t("sidebar.untitled")}
+
+        {workspaces.map((w) => {
+          const isOpen = q ? true : !collapsed.has(w.root);
+          const isCurrent = w.root === currentRoot;
+          return (
+            <div key={w.root} className="ui-tree-workspace">
+              <div
+                className={`ui-tree-ws-head${isCurrent ? " current" : ""}`}
+                onClick={() => toggleCollapse(w.root)}
+                title={w.root}
+              >
+                <span className="ui-tree-caret">{isOpen ? "▾" : "▸"}</span>
+                <span className="ui-tree-icon">📁</span>
+                <span className="ui-tree-ws-label">{w.label}</span>
+                <span className="ui-tree-count">{w.sessions.length}</span>
+                <IconButton
+                  className="ui-tree-ws-new"
+                  title={t("workspace.newSession")}
+                  aria-label={t("workspace.newSession")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNewSessionInWorkspace(w.root);
+                  }}
+                >
+                  ＋
+                </IconButton>
               </div>
-            )}
-            <div className="ui-session-meta">
-              <StatusDot status={entry.status} />
-              <span>{statusLabel(entry.status, t)}</span>
-              <span>· {relativeTime(entry.updateTime, t)}</span>
+              {isOpen ? (
+                <div className="ui-tree-children">
+                  {w.sessions.length === 0 ? (
+                    <div className="ui-session-empty">{t("workspace.empty")}</div>
+                  ) : (
+                    w.sessions.map((s) => renderSession(w.root, s))
+                  )}
+                </div>
+              ) : null}
             </div>
-            {entry.id === activeId && editingId !== entry.id ? (
-              <div className="ui-session-actions" onClick={(e) => e.stopPropagation()}>
-                <Button size="sm" variant="subtle" onClick={() => beginRename(entry)}>
-                  {t("sidebar.rename")}
-                </Button>
-                <Button size="sm" variant="subtle" onClick={() => onDelete(entry.id)}>
-                  {t("sidebar.delete")}
-                </Button>
+          );
+        })}
+
+        {archived.length > 0 ? (
+          <div className="ui-tree-workspace ui-tree-archived">
+            <div className="ui-tree-ws-head" onClick={() => setArchivedOpen((v) => !v)}>
+              <span className="ui-tree-caret">{archivedOpen || q ? "▾" : "▸"}</span>
+              <span className="ui-tree-icon">🗄</span>
+              <span className="ui-tree-ws-label">{t("workspace.archivedGroup")}</span>
+              <span className="ui-tree-count">{archived.length}</span>
+            </div>
+            {archivedOpen || q ? (
+              <div className="ui-tree-children">
+                {archived.map(({ root, session }) => (
+                  <div key={session.id} className="ui-session-item ui-tree-session archived">
+                    <div className="ui-session-title">
+                      <span className="ui-tree-icon">💬</span>
+                      {session.summary || t("sidebar.untitled")}
+                    </div>
+                    <div className="ui-session-actions" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="subtle" onClick={() => onUnarchive(session.id)}>
+                        {t("workspace.unarchive")}
+                      </Button>
+                      <Button size="sm" variant="subtle" onClick={() => onDelete(session.id)}>
+                        {t("sidebar.delete")}
+                      </Button>
+                    </div>
+                    <div className="ui-tree-ws-path" title={root}>
+                      {root}
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
-        ))}
+        ) : null}
       </div>
+
+      <button className="ui-session-tokens" onClick={onOpenTokens} title={t("topbar.tokenPanelTitle")}>
+        <span className="ui-session-tokens-part">
+          <span className="ui-session-tokens-label">{t("tokens.workspaceTotal")}</span>
+          <span className="ui-session-tokens-value">{formatTokens(currentTotal)}</span>
+        </span>
+        <span className="ui-session-tokens-part">
+          <span className="ui-session-tokens-label">{t("tokens.overall")}</span>
+          <span className="ui-session-tokens-value">{formatTokens(overallTotal)}</span>
+        </span>
+      </button>
     </div>
   );
 }

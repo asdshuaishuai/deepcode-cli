@@ -57,11 +57,41 @@ export const IpcRequest = {
   // Plugin channels
   PluginSearchSkills: "plugin:searchSkills",
   PluginRefreshSkills: "plugin:refreshSkills",
+  PluginReadSkillDoc: "plugin:readSkillDoc",
   PluginUpsertMcpServer: "plugin:upsertMcpServer",
   PluginRemoveMcpServer: "plugin:removeMcpServer",
 
   /** Scan workspace files for @file mentions */
   ScanFiles: "app:scanFiles",
+
+  // Workspace-grouped sessions + archive
+  WorkspaceListSessions: "workspace:listSessions",
+  SessionArchive: "session:archive",
+  SessionUnarchive: "session:unarchive",
+
+  // Git source control
+  GitStatus: "git:status",
+  GitStage: "git:stage",
+  GitUnstage: "git:unstage",
+  GitCommit: "git:commit",
+  GitCurrentBranch: "git:currentBranch",
+  GitListBranches: "git:listBranches",
+  GitCheckout: "git:checkout",
+  GitDiff: "git:diff",
+  GitLog: "git:log",
+  GitCommitDiff: "git:commitDiff",
+
+  // Agent changes (write/edit files in a session)
+  AgentChangesList: "agent:changesList",
+  AgentChangesDiff: "agent:changesDiff",
+
+  // CodeGraph index library
+  CodegraphList: "codegraph:list",
+  CodegraphReindex: "codegraph:reindex",
+
+  // MCP management (moved out of settings into the plugin module)
+  PluginMcpList: "plugin:mcpList",
+  PluginSetMcpEnabled: "plugin:setMcpEnabled",
 } as const;
 
 /** Event channels (main -> renderer via webContents.send). */
@@ -88,6 +118,87 @@ export type SerializableProcess = {
 
 export type SerializableSessionEntry = Omit<SessionEntry, "processes"> & {
   processes: SerializableProcess[];
+  /** Desktop-only: archive state, merged from the sidecar store (never in core). */
+  archived?: boolean;
+  /** Desktop-only: the workspace root this session belongs to. */
+  workspaceRoot?: string;
+};
+
+/** A workspace directory node grouping its (non-archived) sessions. */
+export type WorkspaceGroup = {
+  root: string;
+  label: string;
+  projectCode: string;
+  sessions: SerializableSessionEntry[];
+};
+
+/** Cross-workspace session listing plus a flat archived bucket. */
+export type WorkspaceSessions = {
+  workspaces: WorkspaceGroup[];
+  archived: Array<{ root: string; session: SerializableSessionEntry }>;
+};
+
+/** A single changed file from `git status --porcelain`. */
+export type GitStatusFile = {
+  path: string;
+  /** Index (staged) status char, e.g. "M", "A", "D", "?". */
+  index: string;
+  /** Working-tree status char. */
+  work: string;
+  staged: boolean;
+};
+
+/** Parsed git working-tree status for a workspace. */
+export type GitStatus = {
+  isRepo: boolean;
+  branch: string;
+  files: GitStatusFile[];
+};
+
+/** A unified diff payload for one file. */
+export type DiffPayload = {
+  file: string;
+  diff: string;
+  binary: boolean;
+};
+
+/** A file mutated by the agent (write/edit) within a session. */
+export type AgentChangeFile = {
+  path: string;
+};
+
+/** A single commit from `git log`. */
+export type GitLogEntry = {
+  hash: string;
+  shortHash: string;
+  author: string;
+  /** Short (relative) date string. */
+  date: string;
+  subject: string;
+};
+
+/** One workspace's CodeGraph index status for the index-library list. */
+export type CodegraphIndexEntry = {
+  root: string;
+  label: string;
+  /** True when the workspace already contains a `.codegraph/` directory. */
+  initialized: boolean;
+};
+
+/** A managed MCP server surfaced to the plugin MCP module. */
+export type PluginMcpServer = {
+  name: string;
+  command: string;
+  /** Whitespace-separated argv tokens. */
+  args: string;
+  /** One KEY=VALUE per line. */
+  env: string;
+  /** Disabled servers are not launched by the engine. */
+  enabled: boolean;
+  /** Built-in servers (e.g. codegraph) may be disabled but never removed. */
+  builtin: boolean;
+  /** Live runtime status, when the server is connected/known to the engine. */
+  status?: McpServerStatus;
 };
 
 /** Resolved settings summary surfaced to the renderer (never leaks the API key). */
@@ -186,6 +297,8 @@ export type DesktopApi = {
   pluginSearchSkills(query: string, sessionId?: string): Promise<SkillInfo[]>;
   /** Force-refresh skills from disk. */
   pluginRefreshSkills(sessionId?: string): Promise<SkillInfo[]>;
+  /** Read a skill's raw SKILL.md markdown by its display path. */
+  pluginReadSkillDoc(path: string): Promise<string>;
   /** Add or update an MCP server config (instant reconnect). */
   pluginUpsertMcpServer(name: string, command: string, args?: string[], env?: Record<string, string>): Promise<void>;
   /** Remove an MCP server. */
@@ -203,6 +316,44 @@ export type DesktopApi = {
   // ── File scanning (for @file mentions) ──────────────────────────────────
   /** Scan workspace files matching a query. Returns up to 20 results. */
   scanFiles(query: string): Promise<FileMatch[]>;
+
+  // ── Workspace-grouped sessions + archive ────────────────────────────────
+  /** List all sessions across every known workspace, grouped and with archived split out. */
+  listWorkspaceSessions(): Promise<WorkspaceSessions>;
+  /** Mark a session archived (hidden from the main tree). */
+  archiveSession(id: string): Promise<void>;
+  /** Restore a session from the archive. */
+  unarchiveSession(id: string): Promise<void>;
+
+  // ── Git source control ──────────────────────────────────────────────────
+  gitStatus(): Promise<GitStatus>;
+  gitStage(file: string): Promise<{ ok: boolean; error?: string }>;
+  gitUnstage(file: string): Promise<{ ok: boolean; error?: string }>;
+  gitCommit(message: string): Promise<{ ok: boolean; error?: string }>;
+  gitCurrentBranch(): Promise<string>;
+  gitListBranches(): Promise<string[]>;
+  gitCheckout(branch: string): Promise<{ ok: boolean; error?: string }>;
+  gitDiff(file: string, staged: boolean): Promise<DiffPayload>;
+  /** Recent commits (newest first), capped by `limit` (default 50). */
+  gitLog(limit?: number): Promise<GitLogEntry[]>;
+  /** Combined diff for a single commit (`git show`). */
+  gitCommitDiff(hash: string): Promise<DiffPayload>;
+
+  // ── Agent changes ───────────────────────────────────────────────────────
+  agentChangesList(sessionId: string): Promise<AgentChangeFile[]>;
+  agentChangesDiff(sessionId: string, file: string): Promise<DiffPayload>;
+
+  // ── CodeGraph index library ─────────────────────────────────────────────
+  /** List every known workspace with its CodeGraph initialization state. */
+  codegraphList(): Promise<CodegraphIndexEntry[]>;
+  /** Re-index a workspace: `init` when uninitialized, else incremental `index`. */
+  codegraphReindex(root: string): Promise<{ ok: boolean; action: "init" | "index"; error?: string }>;
+
+  // ── MCP management (plugin module) ──────────────────────────────────────
+  /** List all MCP servers (user + built-in) with enable/runtime state. */
+  pluginMcpList(): Promise<PluginMcpServer[]>;
+  /** Enable or disable a server (built-ins may be disabled, never removed). */
+  pluginSetMcpEnabled(name: string, enabled: boolean): Promise<void>;
 };
 
 /** A unified plugin event payload (mirrors PluginEvent from plugin-manager.ts). */

@@ -11,8 +11,71 @@
 export type Appearance = "light" | "dark";
 export type ReasoningMode = "normal" | "expanded" | "hidden";
 
+// The visual theme picks the stylesheet that binds the `--ui-*` vocabulary.
+// Aqua ships on macOS, Metro on Windows, Glass (glassmorphism) is the Linux
+// default and an opt-in alternative on macOS. The user's explicit choice is
+// persisted and wins over the platform default.
+export type Theme = "aqua" | "metro" | "glass";
+
 const APPEARANCE_KEY = "deepcode.appearance";
 const REASONING_KEY = "deepcode.reasoningMode";
+const THEME_KEY = "deepcode.theme";
+
+/** DOM id given to the injected theme stylesheet so it can be swapped at runtime. */
+export const THEME_LINK_ID = "deepcode-theme-css";
+
+const THEME_STYLESHEETS: Record<Theme, string> = {
+  aqua: "./styles.css",
+  metro: "./styles-metro.css",
+  glass: "./styles-glass.css",
+};
+
+/** The stylesheet href that binds `--ui-*` tokens for a theme. */
+export function themeStylesheet(theme: Theme): string {
+  return THEME_STYLESHEETS[theme];
+}
+
+/** The native theme for a platform (before any persisted user override). */
+export function defaultTheme(platform: string): Theme {
+  if (platform === "win32") return "metro";
+  if (platform === "linux") return "glass";
+  return "aqua";
+}
+
+/** The non-glass theme a platform toggles back to when Glass is turned off. */
+export function baseTheme(platform: string): Theme {
+  return platform === "win32" ? "metro" : "aqua";
+}
+
+export function getStoredTheme(): Theme | null {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    return stored === "aqua" || stored === "metro" || stored === "glass" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveTheme(platform: string): Theme {
+  return getStoredTheme() ?? defaultTheme(platform);
+}
+
+/** Swap the injected theme stylesheet in place (no reload required). */
+export function applyTheme(theme: Theme): void {
+  const link = document.getElementById(THEME_LINK_ID) as HTMLLinkElement | null;
+  if (link) {
+    link.href = themeStylesheet(theme);
+  }
+}
+
+export function setTheme(theme: Theme): void {
+  applyTheme(theme);
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // Persisting is best-effort.
+  }
+}
 
 /** The native tone for a platform's default stylesheet. */
 export function defaultAppearance(platform: string): Appearance {

@@ -168,7 +168,8 @@ export class McpManager {
           if (!this.disposed && this.serverConfigs[name]) {
             this.onServerCrash(name, reason);
           }
-        }
+        },
+        config.cwd
       );
       await client.connect(MCP_STARTUP_TIMEOUT_MS);
       if (this.disposed) {

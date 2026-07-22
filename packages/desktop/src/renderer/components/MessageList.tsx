@@ -33,7 +33,7 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
     return (
       <div className="ui-conversation">
         <div className="ui-welcome">
-          <h1>Deep Code</h1>
+          <h1>{t("app.name")}</h1>
           <div className="ui-welcome-subtitle">{t("empty.subtitle")}</div>
           <div className="ui-welcome-tips">{t("empty.tips")}</div>
           <div className="ui-welcome-quickstart">

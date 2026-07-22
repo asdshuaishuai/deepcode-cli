@@ -2,7 +2,7 @@
 // Mirrors the CLI's file-mentions.ts but simplified for Electron main process use.
 
 import { readdirSync, statSync } from "node:fs";
-import { basename, join, relative, resolve, sep } from "node:path";
+import { join, relative } from "node:path";
 
 const NOISY_DIRS = new Set([
   ".git",

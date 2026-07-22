@@ -48,14 +48,14 @@ const BUILTIN_SLASHES: SlashCandidate[] = [
   { kind: "builtin", name: "exit", label: "/exit", description: "Quit Deep Code" },
 ];
 
-/** Detect a token (starting with / or @) at or before the cursor. */
+/** Detect a token (starting with /, $ or @) at or before the cursor. */
 function getCurrentToken(text: string, cursor: number): { token: string; start: number } | null {
   let start = cursor;
   while (start > 0 && !/\s/.test(text[start - 1] ?? "")) {
     start -= 1;
   }
   const token = text.slice(start, cursor);
-  if (token.startsWith("/") || token.startsWith("@")) {
+  if (token.startsWith("/") || token.startsWith("$") || token.startsWith("@")) {
     return { token, start };
   }
   return null;
@@ -118,6 +118,9 @@ export function Composer(props: Props): JSX.Element {
   const currentToken = useMemo(() => getCurrentToken(value, cursorPos), [value, cursorPos]);
 
   const slashToken = useMemo(() => (currentToken?.token.startsWith("/") ? currentToken.token : null), [currentToken]);
+  // `$` opens a dedicated built-in-command menu (same UI as `/`, builtins only).
+  const dollarToken = useMemo(() => (currentToken?.token.startsWith("$") ? currentToken.token : null), [currentToken]);
+  const commandToken = slashToken ?? dollarToken;
   const atToken = useMemo(
     () => (currentToken?.token.startsWith("@") ? { token: currentToken.token, start: currentToken.start } : null),
     [currentToken]
@@ -125,19 +128,20 @@ export function Composer(props: Props): JSX.Element {
 
   // Slash matches
   const slashMatches = useMemo(() => {
-    if (!slashToken) return [];
-    return filterSlashCandidates(slashItems, slashToken);
-  }, [slashToken, slashItems]);
+    if (slashToken) return filterSlashCandidates(slashItems, slashToken);
+    if (dollarToken) return filterSlashCandidates(BUILTIN_SLASHES, dollarToken);
+    return [];
+  }, [slashToken, dollarToken, slashItems]);
 
-  // Auto-show/hide slash menu on "/"
+  // Auto-show/hide command menu on "/" or "$"
   useEffect(() => {
     if (slashMatches.length > 0 && !showFileMenu) {
       setShowSlashMenu(true);
       setSlashIndex((prev) => Math.min(prev, slashMatches.length - 1));
-    } else if (!slashToken) {
+    } else if (!commandToken) {
       setShowSlashMenu(false);
     }
-  }, [slashMatches, slashToken, showFileMenu]);
+  }, [slashMatches, commandToken, showFileMenu]);
 
   // Auto-show/hide file mention menu on "@"
   useEffect(() => {
@@ -166,8 +170,10 @@ export function Composer(props: Props): JSX.Element {
     (item: SlashCandidate) => {
       if (item.kind === "skill") {
         onToggleSkill(item.name);
-        // Remove the slash token from text
-        const idx = value.lastIndexOf("/", cursorPos - 1);
+        // Remove the command token ("/" or "$") from text
+        const slashIdx = value.lastIndexOf("/", cursorPos - 1);
+        const dollarIdx = value.lastIndexOf("$", cursorPos - 1);
+        const idx = Math.max(slashIdx, dollarIdx);
         if (idx >= 0) {
           onChange(value.slice(0, idx) + value.slice(cursorPos));
         }
@@ -370,7 +376,7 @@ export function Composer(props: Props): JSX.Element {
         <textarea
           ref={textareaRef}
           className="ui-prompt"
-          rows={1}
+          rows={3}
           placeholder={
             disabled
               ? t("composer.respondAbove")
@@ -390,6 +396,14 @@ export function Composer(props: Props): JSX.Element {
         <div className="ui-composer-toolbar">
           <div className="ui-composer-toolbar-left">
             <Switch checked={planMode} onChange={onTogglePlan} label={t("composer.planMode")} />
+            <Switch
+              className="ui-switch-disabled"
+              checked={false}
+              disabled
+              readOnly
+              label={t("composer.targetMode")}
+              title={t("composer.targetModeHint")}
+            />
             {busy || errorText || statusText ? (
               <span className="ui-status-strip">
                 {busy ? <span className="ui-spinner" /> : null}

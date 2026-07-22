@@ -3,6 +3,8 @@
 // the CLI's App.tsx constructs and drives the SessionManager.
 
 import {
+  buildCodegraphMcpServerConfig,
+  CODEGRAPH_MCP_SERVER_NAME,
   createOpenAIClient,
   getProjectSettingsPath,
   getUserSettingsPath,
@@ -10,6 +12,7 @@ import {
   readSettings,
   resolveCurrentSettings,
   SessionManager,
+  setCodegraphDisabled,
   writeModelConfigSelection,
   writeProjectSettings,
   writeSettings,
@@ -27,7 +30,19 @@ import type {
 } from "@vegamo/deepcode-core";
 import { existsSync } from "node:fs";
 import { IpcEvent } from "../shared/ipc.js";
-import type { EditableSettings, PermissionDecision, SerializableSessionEntry, SettingsSummary } from "../shared/ipc.js";
+import type {
+  AgentChangeFile,
+  DiffPayload,
+  EditableSettings,
+  GitLogEntry,
+  PermissionDecision,
+  PluginMcpServer,
+  SerializableSessionEntry,
+  SettingsSummary,
+} from "../shared/ipc.js";
+import { purgeArchivedId } from "./archive-store.js";
+import { readDisabledMcp, setMcpDisabled } from "./mcp-store.js";
+import * as gitService from "./git-service.js";
 
 type Emit = (channel: string, payload?: unknown) => void;
 
@@ -141,8 +156,7 @@ export class SessionBridge {
     private readonly emit: Emit
   ) {
     this.manager = this.createManager(projectRoot);
-    const settings = resolveCurrentSettings(projectRoot);
-    void this.manager.initMcpServers(settings.mcpServers);
+    this.initMcp();
   }
 
   private createManager(projectRoot: string): SessionManager {
@@ -177,8 +191,7 @@ export class SessionBridge {
     this.manager.dispose();
     this.projectRoot = root;
     this.manager = this.createManager(root);
-    const settings = resolveCurrentSettings(root);
-    void this.manager.initMcpServers(settings.mcpServers);
+    this.initMcp();
   }
 
   /**
@@ -190,8 +203,7 @@ export class SessionBridge {
     const active = this.manager.getActiveSessionId();
     this.manager.dispose();
     this.manager = this.createManager(this.projectRoot);
-    const settings = resolveCurrentSettings(this.projectRoot);
-    void this.manager.initMcpServers(settings.mcpServers);
+    this.initMcp();
     if (active) {
       this.manager.setActiveSessionId(active);
     }
@@ -199,6 +211,32 @@ export class SessionBridge {
 
   dispose(): void {
     this.manager.dispose();
+  }
+
+  /**
+   * (Re)initialize MCP servers honoring the desktop-only disable sidecar. The
+   * built-in CodeGraph opt-out is pushed into core (which auto-registers it), and
+   * user-configured servers marked disabled are filtered out before init.
+   */
+  private initMcp(): void {
+    setCodegraphDisabled(this.projectRoot, readDisabledMcp(this.projectRoot).includes(CODEGRAPH_MCP_SERVER_NAME));
+    void this.manager.initMcpServers(this.effectiveMcpServers());
+  }
+
+  /** User-configured MCP servers minus any disabled by the desktop sidecar. */
+  private effectiveMcpServers(): Record<string, McpServerConfig> | undefined {
+    const all = resolveCurrentSettings(this.projectRoot).mcpServers;
+    if (!all) {
+      return all;
+    }
+    const disabled = new Set(readDisabledMcp(this.projectRoot));
+    const filtered: Record<string, McpServerConfig> = {};
+    for (const [name, cfg] of Object.entries(all)) {
+      if (!disabled.has(name)) {
+        filtered[name] = cfg;
+      }
+    }
+    return Object.keys(filtered).length > 0 ? filtered : undefined;
   }
 
   // ── Plugin integration ──────────────────────────────────────────────────────
@@ -239,7 +277,11 @@ export class SessionBridge {
   }
 
   deleteSession(id: string): boolean {
-    return this.manager.deleteSession(id);
+    const deleted = this.manager.deleteSession(id);
+    if (deleted) {
+      purgeArchivedId(id);
+    }
+    return deleted;
   }
 
   renameSession(id: string, summary: string): boolean {
@@ -425,5 +467,194 @@ export class SessionBridge {
       this.manager.restoreSessionCode(sessionId, messageId);
     }
     this.manager.restoreSessionConversation(sessionId, messageId);
+  }
+
+  // ── Agent changes (write/edit files touched during a session) ───────────────
+  /**
+   * Distinct absolute file paths mutated by the agent's `write`/`edit` tools in
+   * a session, newest first. Parsed from each tool result's JSON `metadata`.
+   */
+  agentChangesList(sessionId: string): AgentChangeFile[] {
+    const messages = this.manager.listSessionMessages(sessionId);
+    const seen = new Set<string>();
+    const files: AgentChangeFile[] = [];
+    for (const message of messages) {
+      if (message.role !== "tool" || typeof message.content !== "string") {
+        continue;
+      }
+      let parsed: { name?: unknown; ok?: unknown; metadata?: unknown };
+      try {
+        parsed = JSON.parse(message.content) as typeof parsed;
+      } catch {
+        continue;
+      }
+      const name = typeof parsed.name === "string" ? parsed.name.toLowerCase() : "";
+      if (name !== "write" && name !== "edit") {
+        continue;
+      }
+      const metadata = parsed.metadata;
+      const filePath =
+        metadata && typeof metadata === "object" && "file_path" in metadata
+          ? (metadata as { file_path?: unknown }).file_path
+          : undefined;
+      if (typeof filePath === "string" && filePath.trim() && !seen.has(filePath)) {
+        seen.add(filePath);
+        files.unshift({ path: filePath });
+      }
+    }
+    return files;
+  }
+
+  /**
+   * Working-tree diff for one agent-touched file (the current on-disk change is
+   * the agent's product). Falls back to an informational message off-repo.
+   */
+  async agentChangesDiff(_sessionId: string, file: string): Promise<DiffPayload> {
+    return gitService.diff(this.projectRoot, file, false);
+  }
+
+  // ── Git source control ──────────────────────────────────────────────────────
+  gitStatus() {
+    return gitService.status(this.projectRoot);
+  }
+
+  gitStage(file: string) {
+    return gitService.stage(this.projectRoot, file);
+  }
+
+  gitUnstage(file: string) {
+    return gitService.unstage(this.projectRoot, file);
+  }
+
+  gitCommit(message: string) {
+    return gitService.commit(this.projectRoot, message);
+  }
+
+  gitCurrentBranch() {
+    return gitService.currentBranch(this.projectRoot);
+  }
+
+  gitListBranches() {
+    return gitService.listBranches(this.projectRoot);
+  }
+
+  gitCheckout(branch: string) {
+    return gitService.checkout(this.projectRoot, branch);
+  }
+
+  gitDiff(file: string, staged: boolean) {
+    return gitService.diff(this.projectRoot, file, staged);
+  }
+
+  gitLog(limit?: number): Promise<GitLogEntry[]> {
+    return gitService.log(this.projectRoot, limit);
+  }
+
+  gitCommitDiff(hash: string): Promise<DiffPayload> {
+    return gitService.commitDiff(this.projectRoot, hash);
+  }
+
+  // ── MCP management (plugin module) ──────────────────────────────────────────
+  /**
+   * All MCP servers for the plugin module: user-configured entries plus the
+   * built-in CodeGraph server (always present, never removable). Each carries its
+   * enable state (from the disable sidecar) and current runtime status.
+   */
+  pluginMcpList(): PluginMcpServer[] {
+    const settings = resolveCurrentSettings(this.projectRoot);
+    const configured = settings.mcpServers ?? {};
+    const disabled = new Set(readDisabledMcp(this.projectRoot));
+    const statuses = new Map(this.manager.getMcpStatus().map((s) => [s.name, s]));
+    const list: PluginMcpServer[] = [];
+    for (const [name, cfg] of Object.entries(configured)) {
+      list.push({
+        name,
+        command: cfg.command,
+        args: (cfg.args ?? []).join(" "),
+        env: stringifyEnv(cfg.env),
+        enabled: !disabled.has(name),
+        builtin: name === CODEGRAPH_MCP_SERVER_NAME,
+        status: statuses.get(name),
+      });
+    }
+    // Built-in CodeGraph: shown even when a project has not run `init` yet, so it
+    // can be toggled. A user-provided `codegraph` entry (handled above) wins.
+    if (!Object.prototype.hasOwnProperty.call(configured, CODEGRAPH_MCP_SERVER_NAME)) {
+      const cfg = buildCodegraphMcpServerConfig(this.projectRoot);
+      list.push({
+        name: CODEGRAPH_MCP_SERVER_NAME,
+        command: cfg.command,
+        args: (cfg.args ?? []).join(" "),
+        env: stringifyEnv(cfg.env),
+        enabled: !disabled.has(CODEGRAPH_MCP_SERVER_NAME),
+        builtin: true,
+        status: statuses.get(CODEGRAPH_MCP_SERVER_NAME),
+      });
+    }
+    return list;
+  }
+
+  /** Toggle a server's enable state and re-initialize MCP so it takes effect. */
+  pluginSetMcpEnabled(name: string, enabled: boolean): void {
+    setMcpDisabled(this.projectRoot, name, !enabled);
+    this.reload();
+    this.emit(IpcEvent.McpStatusChanged);
+  }
+
+  /**
+   * Persist a user MCP server to the resolved settings target (project if present,
+   * else user) and reload so it launches immediately. Mirrors updateSettings — the
+   * previous runtime-only upsert never wrote settings, so added servers vanished on
+   * the next reload and never appeared in pluginMcpList (which reads settings).
+   */
+  pluginUpsertMcpServer(name: string, command: string, args?: string[], env?: Record<string, string>): void {
+    const trimmedName = name.trim();
+    const trimmedCommand = command.trim();
+    if (!trimmedName || !trimmedCommand) {
+      return;
+    }
+    const target = this.resolveSaveTarget();
+    const raw = this.readTargetSettings(target);
+    const servers: Record<string, McpServerConfig> = { ...(raw.mcpServers ?? {}) };
+    const config: McpServerConfig = { command: trimmedCommand };
+    if (args && args.length > 0) {
+      config.args = args;
+    }
+    if (env && Object.keys(env).length > 0) {
+      config.env = env;
+    }
+    servers[trimmedName] = config;
+    const next: DeepcodingSettings = { ...raw, mcpServers: servers };
+    if (target === "project") {
+      writeProjectSettings(next, this.projectRoot);
+    } else {
+      writeSettings(next);
+    }
+    this.reload();
+    this.emit(IpcEvent.McpStatusChanged);
+  }
+
+  /** Remove a user MCP server from the settings target and reload. */
+  pluginRemoveMcpServer(name: string): void {
+    const target = this.resolveSaveTarget();
+    const raw = this.readTargetSettings(target);
+    const servers: Record<string, McpServerConfig> = { ...(raw.mcpServers ?? {}) };
+    if (!(name in servers)) {
+      return;
+    }
+    delete servers[name];
+    const next: DeepcodingSettings = { ...raw };
+    if (Object.keys(servers).length > 0) {
+      next.mcpServers = servers;
+    } else {
+      delete next.mcpServers;
+    }
+    if (target === "project") {
+      writeProjectSettings(next, this.projectRoot);
+    } else {
+      writeSettings(next);
+    }
+    this.reload();
+    this.emit(IpcEvent.McpStatusChanged);
   }
 }

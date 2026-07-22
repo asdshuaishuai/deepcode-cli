@@ -122,7 +122,8 @@ export class McpClient {
     private readonly args: string[] = [],
     private readonly env?: Record<string, string>,
     onNotification?: McpNotificationHandler,
-    onDisconnect?: (reason: string) => void
+    onDisconnect?: (reason: string) => void,
+    private readonly cwd?: string
   ) {
     this.notificationHandler = onNotification ?? null;
     this.disconnectHandler = onDisconnect ?? null;
@@ -140,6 +141,7 @@ export class McpClient {
 
       this.process = spawn(spawnSpec.command, spawnSpec.args, {
         stdio: ["pipe", "pipe", "pipe"],
+        cwd: this.cwd,
         env: childEnv,
         shell: spawnSpec.shell,
         windowsHide: spawnSpec.windowsHide,

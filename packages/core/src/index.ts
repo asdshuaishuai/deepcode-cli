@@ -100,6 +100,23 @@ export { normalizeFilePath, getSnippet, clearSessionState, recordFileState, getF
 export { GitFileHistory } from "./common/file-history";
 export { killProcessTree } from "./common/process-tree";
 export { launchNotifyScript } from "./common/notify";
+export {
+  hasCodegraphProject,
+  buildCodegraphMcpServerConfig,
+  configureCodegraphVendorRoot,
+  setCodegraphDisabled,
+  isCodegraphDisabled,
+  getCodegraphVendorRoot,
+  resolveCodegraphExecutable,
+  runCodegraphCommand,
+  runCodegraphInit,
+  runCodegraphSync,
+  CODEGRAPH_PACKAGE,
+  CODEGRAPH_MCP_SERVER_NAME,
+  CODEGRAPH_DIR_NAME,
+  CODEGRAPH_VENDOR_ENTRY,
+} from "./common/codegraph";
+export type { CodegraphExecutable } from "./common/codegraph";
 export { reportNewPrompt } from "./common/telemetry";
 export { DEEPSEEK_V4_MODELS, supportsMultimodal, defaultsToThinkingMode } from "./common/model-capabilities";
 export { findGitBashPath, resolveShellPath, setShellIfWindows } from "./common/shell-utils";

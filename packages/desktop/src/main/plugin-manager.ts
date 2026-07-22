@@ -115,11 +115,7 @@ export class PluginManager {
   // ── Skill operations ───────────────────────────────────────────────────────
 
   /** Return cached skills, optionally filtered by session. */
-  listSkills(sessionId?: string): SkillInfo[] {
-    if (sessionId) {
-      const sm = this.getSessionManager();
-      return this.skillsCache;
-    }
+  listSkills(_sessionId?: string): SkillInfo[] {
     return this.skillsCache;
   }
 
@@ -133,6 +129,13 @@ export class PluginManager {
     this.skillsCache = await sm.listSkills(sessionId);
     this.emitSkillsChanged();
     return this.skillsCache;
+  }
+
+  /** Read a skill's raw SKILL.md markdown by its display path (for the plugin detail pane). */
+  readSkillDoc(path: string): string {
+    const sm = this.getSessionManager();
+    if (!sm) return "";
+    return sm.readSkillDocument(path);
   }
 
   /** Search skills by keyword (name or description, case-insensitive).

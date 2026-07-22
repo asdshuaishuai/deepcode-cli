@@ -102,10 +102,10 @@ export function Message({
             </div>
           ) : null}
           {resultMd ? (
-            <div className="ui-tool-result">
-              <div className="label">└ {t("msg.result")}</div>
+            <details className="ui-tool-result" open={resultMd.length < 400}>
+              <summary className="label">└ {t("msg.result")}</summary>
               <Md text={resultMd} />
-            </div>
+            </details>
           ) : null}
         </div>
       </div>

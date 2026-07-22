@@ -9,6 +9,7 @@
 // left external so they resolve from node_modules at runtime, exactly like the CLI.
 
 import { build, context } from "esbuild";
+import { execFileSync } from "node:child_process";
 import { cp, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -65,19 +66,47 @@ const rendererConfig = {
   loader: { ".png": "dataurl", ".svg": "dataurl" },
 };
 
+// Ensure CodeGraph is vendored (checked out + compiled) into vendor/codegraph.
+// Best-effort: if it fails (no network/git), the core resolver falls back to npx,
+// so the build must not break because of it.
+function ensureCodegraphVendored() {
+  const entry = resolve(__dirname, "vendor", "codegraph", "dist", "bin", "codegraph.js");
+  if (existsSync(entry)) {
+    return;
+  }
+  const script = resolve(__dirname, "..", "..", "scripts", "vendor-codegraph.js");
+  try {
+    console.log("[desktop] vendoring CodeGraph (first build) …");
+    execFileSync(process.execPath, [script], { stdio: "inherit" });
+  } catch {
+    console.warn("[desktop] CodeGraph vendoring skipped — runtime will fall back to `npx @colbymchenry/codegraph`.");
+  }
+}
+
 async function copyStaticAssets() {
   await mkdir(resolve(outdir, "renderer"), { recursive: true });
   await cp(resolve(__dirname, "src/renderer/index.html"), resolve(outdir, "renderer/index.html"));
   await cp(resolve(__dirname, "src/renderer/ui.css"), resolve(outdir, "renderer/ui.css"));
   await cp(resolve(__dirname, "src/renderer/styles.css"), resolve(outdir, "renderer/styles.css"));
-  // styles-metro.css 为新建文件,构建时若不存在则跳过(不报错)
+  // Brand icon (orca): main process rasterizes dist/orca-icon.svg; renderer uses it as favicon.
+  const orcaSvg = resolve(__dirname, "src/assets/orca-icon.svg");
+  if (existsSync(orcaSvg)) {
+    await cp(orcaSvg, resolve(outdir, "orca-icon.svg"));
+    await cp(orcaSvg, resolve(outdir, "renderer/orca-icon.svg"));
+  }
+  // styles-metro.css / styles-glass.css 为新建文件,构建时若不存在则跳过(不报错)
   const metroCss = resolve(__dirname, "src/renderer/styles-metro.css");
   if (existsSync(metroCss)) {
     await cp(metroCss, resolve(outdir, "renderer/styles-metro.css"));
   }
+  const glassCss = resolve(__dirname, "src/renderer/styles-glass.css");
+  if (existsSync(glassCss)) {
+    await cp(glassCss, resolve(outdir, "renderer/styles-glass.css"));
+  }
 }
 
 async function run() {
+  ensureCodegraphVendored();
   if (isDev) {
     const contexts = await Promise.all([context(mainConfig), context(preloadConfig), context(rendererConfig)]);
     await Promise.all(contexts.map((ctx) => ctx.watch()));

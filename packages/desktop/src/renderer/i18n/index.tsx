@@ -17,16 +17,39 @@ type I18nContextValue = {
 
 const STORAGE_KEY = "deepcode.locale";
 
+const SUPPORTED_LOCALES: Locale[] = ["en", "zh", "zh-TW", "zh-HK", "ja", "ko"];
+
+/** Map a `navigator.language` tag to one of the supported locales. */
+function mapNavigatorLocale(tag: string): Locale {
+  const lower = tag.toLowerCase();
+  if (lower.startsWith("zh")) {
+    if (lower.includes("tw") || lower.includes("hant-tw")) {
+      return "zh-TW";
+    }
+    if (lower.includes("hk") || lower.includes("mo") || lower.includes("hant")) {
+      return "zh-HK";
+    }
+    return "zh";
+  }
+  if (lower.startsWith("ja")) {
+    return "ja";
+  }
+  if (lower.startsWith("ko")) {
+    return "ko";
+  }
+  return "en";
+}
+
 function detectLocale(): Locale {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "en" || stored === "zh") {
-      return stored;
+    if (stored && (SUPPORTED_LOCALES as string[]).includes(stored)) {
+      return stored as Locale;
     }
   } catch {
     // localStorage may be unavailable; fall through to navigator detection.
   }
-  return typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
+  return typeof navigator !== "undefined" ? mapNavigatorLocale(navigator.language) : "en";
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
