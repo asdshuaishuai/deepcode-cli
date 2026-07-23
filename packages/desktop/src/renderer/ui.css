@@ -2656,7 +2656,43 @@ button.ui-tool-head:hover {
   font-variant-emoji: text;
 }
 
-/* ── Top bar: project / branch ───────────────────────────────────────────── */
+/* ── Top bar: unified pill style ───────────────────────────────────────────
+   Three right-aligned groups share the same accent-tinted pill shell so
+   the bar reads as a coherent control surface: project/branch, model +
+   thinking, and the token mini-panel. Background + border come from
+   the theme's accent at 8% / 28% alpha so the colour stays soft even
+   when the accent is strong. Hover deepens the tint to 14% / 45%
+   to confirm the hit target without changing geometry. */
+.ui-topbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-accent) 28%, transparent);
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, var(--ui-accent) 8%, var(--ui-surface-raised));
+  color: var(--ui-text);
+  flex-shrink: 0;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.ui-topbar-pill:hover {
+  background: color-mix(in srgb, var(--ui-accent) 14%, var(--ui-surface-raised));
+  border-color: color-mix(in srgb, var(--ui-accent) 45%, transparent);
+}
+/* When a Select inside the pill receives keyboard focus, deepen the pill
+   too so the user can see which group is active even after the inner
+   borderless Select swallows its own focus ring. */
+.ui-topbar-pill:focus-within {
+  background: color-mix(in srgb, var(--ui-accent) 16%, var(--ui-surface-raised));
+  border-color: color-mix(in srgb, var(--ui-accent) 55%, transparent);
+}
+button.ui-topbar-pill {
+  cursor: pointer;
+  font: inherit;
+}
+
+/* ── Top bar: project / branch pill ──────────────────────────────────────── */
 .ui-topbar-project {
   display: inline-flex;
   align-items: center;
@@ -2672,31 +2708,67 @@ button.ui-tool-head:hover {
   text-overflow: ellipsis;
   flex-shrink: 0;
   max-width: 300px;
+  color: var(--ui-text);
 }
 .ui-topbar-sep {
   color: var(--ui-text-faint);
+  margin: 0 2px;
+  user-select: none;
 }
 .ui-topbar-branch-static {
   color: var(--ui-text-dim);
   white-space: nowrap;
+  font-weight: 500;
 }
+/* The branch Select lives inside .ui-topbar-pill and has no own border —
+   the pill is the border. Background is transparent so the pill tint
+   shows through, and the height/padding reset match the pill geometry. */
 .ui-topbar-branch {
-  height: 30px;
+  height: 26px;
   max-width: 160px;
+  border: 0;
+  background: transparent;
+  padding: 0 4px;
+  font-weight: 500;
+  color: var(--ui-text);
+  cursor: pointer;
+}
+.ui-topbar-branch:focus {
+  outline: none;
+  color: var(--ui-accent);
 }
 
-/* ── Top bar: dual model selectors ───────────────────────────────────────── */
+/* ── Top bar: dual model selectors (one pill, two borderless selects) ──── */
 .ui-topbar-models {
   display: inline-flex;
   align-items: center;
-  gap: var(--ui-space-2);
+  gap: 0;
   min-width: 0;
   flex-shrink: 1;
 }
+/* Thin vertical divider between the two Selects so they read as paired
+   sub-controls inside the pill instead of two independent inputs. */
+.ui-topbar-models .ui-topbar-divider {
+  width: 1px;
+  height: 16px;
+  background: color-mix(in srgb, var(--ui-accent) 28%, transparent);
+  flex-shrink: 0;
+}
 .ui-topbar-model,
 .ui-topbar-thinking {
-  height: 30px;
+  height: 26px;
   font-size: 12.5px;
+  border: 0;
+  background: transparent;
+  padding: 0 8px;
+  color: var(--ui-text);
+  font-weight: 500;
+  cursor: pointer;
+}
+.ui-topbar-model:focus,
+.ui-topbar-thinking:focus {
+  outline: none;
+  color: var(--ui-accent);
 }
 .ui-topbar-model {
   max-width: 180px;
@@ -2705,21 +2777,14 @@ button.ui-tool-head:hover {
   max-width: 120px;
 }
 
-/* ── Top bar: token mini-panel ───────────────────────────────────────────── */
+/* ── Top bar: token mini-panel (uses the same pill) ─────────────────────── */
 .ui-topbar-tokens {
   display: inline-flex;
   align-items: center;
   gap: var(--ui-space-3);
-  height: 28px;
-  padding: 0 var(--ui-space-3);
-  border: 1px solid var(--ui-border-soft);
-  border-radius: var(--ui-radius-pill);
-  background: var(--ui-surface-raised);
   cursor: pointer;
-  flex-shrink: 0;
-}
-.ui-topbar-tokens:hover {
-  border-color: var(--ui-accent);
+  font: inherit;
+  /* Inherits the .ui-topbar-pill shell: background, border, radius, hover. */
 }
 .ui-topbar-token-part {
   display: inline-flex;

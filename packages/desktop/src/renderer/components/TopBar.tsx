@@ -144,8 +144,9 @@ export function TopBar({
     <div className="ui-window-bar">
       {isMac ? macControls : null}
 
-      {/* Project / branch: "项目名 / 分支名" */}
-      <div className="ui-topbar-project" title={projectRoot}>
+      {/* Project / branch: "项目名 / 分支名" — wrapped in a unified pill so
+         the control surface reads as one cohesive accent-tinted group. */}
+      <div className="ui-topbar-pill ui-topbar-project" title={projectRoot}>
         <span className="ui-topbar-project-name">{projectName(projectRoot) || t("topbar.desktop")}</span>
         {branches.length > 0 ? (
           <>
@@ -173,9 +174,12 @@ export function TopBar({
 
       <div className="ui-window-bar-spacer" />
 
-      {/* Dual model selectors: model + thinking model */}
+      {/* Dual model selectors: model + thinking model, paired inside one
+         pill. A thin vertical divider separates the two sub-controls so
+         they still feel like distinct inputs without breaking out of the
+         shared accent shell. */}
       {settings ? (
-        <div className="ui-topbar-models">
+        <div className="ui-topbar-pill ui-topbar-models">
           <Select
             className="ui-topbar-model"
             value={modelSelectValue}
@@ -201,6 +205,7 @@ export function TopBar({
             {!modelKnown ? <option value={settings.model}>{settings.model}</option> : null}
             <option value="__custom__">{t("model.custom")}</option>
           </Select>
+          <span className="ui-topbar-divider" aria-hidden="true" />
           <Select
             className="ui-topbar-thinking"
             value={currentThinkingKey(settings)}
@@ -223,8 +228,8 @@ export function TopBar({
         </div>
       ) : null}
 
-      {/* Compact token mini-panel */}
-      <button className="ui-topbar-tokens" onClick={onOpenTokens} title={t("topbar.tokenPanelTitle")}>
+      {/* Compact token mini-panel — also wrapped in the unified pill. */}
+      <button className="ui-topbar-pill ui-topbar-tokens" onClick={onOpenTokens} title={t("topbar.tokenPanelTitle")}>
         <span className="ui-topbar-token-part">
           <span className="ui-topbar-token-label">{t("topbar.contextTokens")}</span>
           <span className="ui-topbar-token-value">{formatTokens(activeTokens)}</span>
