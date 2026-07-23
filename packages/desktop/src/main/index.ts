@@ -9,8 +9,7 @@ import {
   setShellIfWindows,
   configureCodegraphVendorRoot,
   hasCodegraphProject,
-  runCodegraphInitAsync,
-  runCodegraphSyncAsync,
+  runCodegraphResetWithOutput,
 } from "@vegamo/deepcode-core";
 import type { ModelConfigSelection, UserPromptContent } from "@vegamo/deepcode-core";
 import { IpcEvent, IpcRequest } from "../shared/ipc.js";
@@ -269,13 +268,15 @@ function registerIpc(): void {
     }));
   });
   handle(IpcRequest.CodegraphReindex, async (root: string) => {
-    const initialized = hasCodegraphProject(root);
-    if (initialized) {
-      await runCodegraphSyncAsync(root);
-      return { ok: true, action: "index" as const };
-    }
-    await runCodegraphInitAsync(root);
-    return { ok: true, action: "init" as const };
+    const exitCode = await runCodegraphResetWithOutput(root, (chunk, stream) => {
+      emit(IpcEvent.CodegraphProgress, { root, chunk, stream, done: false });
+    });
+    emit(IpcEvent.CodegraphProgress, { root, chunk: "", stream: "stdout", done: true, exitCode });
+    return {
+      ok: exitCode === 0,
+      action: "reset" as const,
+      error: exitCode !== 0 ? `exit code ${exitCode}` : undefined,
+    };
   });
 
   // ── MCP management (plugin module) ────────────────────────────────────────

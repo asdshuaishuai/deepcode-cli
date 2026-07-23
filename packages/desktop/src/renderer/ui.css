@@ -3181,6 +3181,39 @@ button.ui-topbar-pill {
   color: var(--ui-success, #16a34a);
 }
 
+/* ── Index log output (live indexing progress) ────────────────────────────── */
+.ui-index-log {
+  margin-top: var(--ui-space-2);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-md);
+  overflow: hidden;
+}
+.ui-index-log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ui-space-1) var(--ui-space-2);
+  background: var(--ui-surface-alt, rgba(0, 0, 0, 0.03));
+  font-size: 11px;
+  color: var(--ui-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ui-index-log-body {
+  margin: 0;
+  padding: var(--ui-space-2);
+  max-height: 180px;
+  overflow-y: auto;
+  font-family: var(--ui-font-mono, "SF Mono", "Cascadia Code", "Fira Code", monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--ui-text-secondary);
+  background: var(--ui-surface);
+}
+
 /* ── Plugin MCP rows (items 5 & 8) ───────────────────────────────────────── */
 .ui-mcp-row {
   display: flex;

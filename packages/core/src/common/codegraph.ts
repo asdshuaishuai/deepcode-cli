@@ -273,6 +273,72 @@ export function runCodegraphSyncAsync(projectRoot: string): Promise<void> {
   });
 }
 
+/**
+ * True reset: remove the `.codegraph/` directory entirely, then run a fresh
+ * `codegraph init` to rebuild the index from scratch. The desktop "Reset index"
+ * button uses this so the user always gets a clean rebuild regardless of the
+ * previous index state or any in-flight syncs.
+ */
+export async function runCodegraphResetAsync(projectRoot: string): Promise<void> {
+  const dir = path.join(projectRoot, CODEGRAPH_DIR_NAME);
+  // Clear any in-flight sync guard for this root so the subsequent init is not blocked.
+  inFlightSyncs.delete(path.resolve(projectRoot));
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    // Directory may not exist — that's fine, init will create it.
+  }
+  await runCodegraphCommandAsync(projectRoot, ["init"]);
+}
+
+/**
+ * Spawn a CodeGraph subcommand with piped stdio so the caller can capture
+ * stdout/stderr output (e.g. for progress visualization in the desktop UI).
+ * Returns the ChildProcess directly — the caller is responsible for handling
+ * output and waiting for exit.
+ */
+export function spawnCodegraphPiped(projectRoot: string, subcommand: string[]): ChildProcess {
+  const exe = resolveCodegraphExecutable();
+  const spec = createMcpSpawnSpec(exe.command, [...exe.prefixArgs, ...subcommand]);
+  const env = exe.env && Object.keys(exe.env).length > 0 ? { ...process.env, ...exe.env } : process.env;
+  return spawn(spec.command, spec.args, {
+    cwd: projectRoot,
+    env,
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: spec.shell,
+    windowsHide: spec.windowsHide,
+  });
+}
+
+/**
+ * Reset with live output: removes `.codegraph/`, spawns `codegraph init` with
+ * piped stdio, and invokes `onOutput` for each chunk of stdout/stderr. Resolves
+ * when the process exits. Used by the desktop UI to visualize indexing progress.
+ */
+export function runCodegraphResetWithOutput(
+  projectRoot: string,
+  onOutput: (chunk: string, stream: "stdout" | "stderr") => void
+): Promise<number> {
+  const dir = path.join(projectRoot, CODEGRAPH_DIR_NAME);
+  inFlightSyncs.delete(path.resolve(projectRoot));
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    // Directory may not exist.
+  }
+  return new Promise<number>((resolve) => {
+    try {
+      const cp = spawnCodegraphPiped(projectRoot, ["init"]);
+      cp.stdout?.on("data", (d: Buffer) => onOutput(d.toString(), "stdout"));
+      cp.stderr?.on("data", (d: Buffer) => onOutput(d.toString(), "stderr"));
+      cp.on("error", () => resolve(1));
+      cp.on("close", (code) => resolve(code ?? 0));
+    } catch {
+      resolve(1);
+    }
+  });
+}
+
 /** Fire-and-forget never waited for exit. Async version that does. */
 async function runCodegraphCommandAsync(projectRoot: string, subcommand: string[]): Promise<void> {
   return new Promise<void>((resolve) => {

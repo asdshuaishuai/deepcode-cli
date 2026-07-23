@@ -88,6 +88,7 @@ const api: DesktopApi = {
   // ── CodeGraph index library ──────────────────────────────────
   codegraphList: () => ipcRenderer.invoke(IpcRequest.CodegraphList),
   codegraphReindex: (root) => ipcRenderer.invoke(IpcRequest.CodegraphReindex, root),
+  onCodegraphProgress: (cb) => subscribe(IpcEvent.CodegraphProgress, cb as (p: never) => void),
 
   // ── MCP management (plugin module) ─────────────────────────────
   pluginMcpList: () => ipcRenderer.invoke(IpcRequest.PluginMcpList),

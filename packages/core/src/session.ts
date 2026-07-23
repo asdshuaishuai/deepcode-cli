@@ -14,7 +14,7 @@ import {
   runCodegraphSync,
 } from "./common/codegraph";
 import { buildThinkingRequestOptions } from "./common/openai-thinking";
-import { DEEPSEEK_V4_MODELS } from "./common/model-capabilities";
+import { DEEPSEEK_V4_MODELS, COMPACTION_MODEL } from "./common/model-capabilities";
 import { readTextFileWithMetadata } from "./common/file-utils";
 import {
   buildSkillDocumentsPrompt,
@@ -1753,11 +1753,15 @@ ${content}
 
   async compactSession(sessionId: string, signal?: AbortSignal): Promise<void> {
     this.throwIfAborted(signal);
-    const { client, model, baseURL, temperature, thinkingEnabled, reasoningEffort, debugLogEnabled } =
-      this.createOpenAIClient();
+    const { client, baseURL, temperature, debugLogEnabled } = this.createOpenAIClient();
     if (!client) {
       return;
     }
+    // Always use the fast/cheap flash model for compaction (summarization does
+    // not need the full reasoning capability of the pro model).
+    const model = COMPACTION_MODEL;
+    const thinkingEnabled = false;
+    const reasoningEffort = undefined;
     const sessionMessages = this.listSessionMessages(sessionId).filter((message) => !message.compacted);
     if (sessionMessages.length === 0) {
       return;

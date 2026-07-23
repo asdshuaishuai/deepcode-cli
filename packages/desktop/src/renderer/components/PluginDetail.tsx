@@ -345,15 +345,19 @@ function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
   const { t, locale } = useI18n();
   const [info, setInfo] = useState<BuiltinPluginInfo | null>(null);
   const [doc, setDoc] = useState("");
+  const [docError, setDocError] = useState(false);
 
+  // Load plugin metadata first.
   useEffect(() => {
     let cancelled = false;
-    void api.pluginBuiltinList().then((list) => {
-      if (!cancelled) setInfo(list.find((p) => p.name === name) ?? null);
-    });
-    void api.pluginBuiltinReadDoc(name, locale).then((md) => {
-      if (!cancelled) setDoc(md);
-    });
+    api
+      .pluginBuiltinList()
+      .then((list) => {
+        if (!cancelled) setInfo(list.find((p) => p.name === name) ?? null);
+      })
+      .catch(() => {
+        /* noop – info stays null */
+      });
     return () => {
       cancelled = true;
     };
@@ -361,6 +365,28 @@ function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
 
   const displayName = builtinLabel(t, name, "name", name);
   const displayDesc = builtinLabel(t, name, "desc", info?.description ?? "");
+
+  // Once info is available, derive the directory name from `path` (format:
+  // "builtin-plugin:<dirName>") so the doc read is correct even when the
+  // manifest name differs from the folder name.
+  useEffect(() => {
+    if (!info) return;
+    let cancelled = false;
+    const dirName = info.path.replace(/^builtin-plugin:/, "");
+    setDoc("");
+    setDocError(false);
+    api
+      .pluginBuiltinReadDoc(dirName, locale)
+      .then((md) => {
+        if (!cancelled) setDoc(md);
+      })
+      .catch(() => {
+        if (!cancelled) setDocError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [info, locale]);
 
   return (
     <div className="ui-plugin-detail">
@@ -387,11 +413,11 @@ function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
       {/* Documentation */}
       <section className="ui-detail-doc">
         <h3>{t("plugins.detail.doc")}</h3>
-        {doc ? (
-          <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(doc) }} />
-        ) : (
+        {docError ? (
           <div className="ui-plugin-detail-empty">{t("plugins.detail.docError")}</div>
-        )}
+        ) : doc ? (
+          <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(doc) }} />
+        ) : null}
       </section>
     </div>
   );

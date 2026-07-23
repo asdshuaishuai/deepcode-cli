@@ -114,6 +114,9 @@ export {
   runCodegraphInitAsync,
   runCodegraphSync,
   runCodegraphSyncAsync,
+  runCodegraphResetAsync,
+  runCodegraphResetWithOutput,
+  spawnCodegraphPiped,
   CODEGRAPH_PACKAGE,
   CODEGRAPH_MCP_SERVER_NAME,
   CODEGRAPH_DIR_NAME,
@@ -121,7 +124,12 @@ export {
 } from "./common/codegraph";
 export type { CodegraphExecutable } from "./common/codegraph";
 export { reportNewPrompt } from "./common/telemetry";
-export { DEEPSEEK_V4_MODELS, supportsMultimodal, defaultsToThinkingMode } from "./common/model-capabilities";
+export {
+  DEEPSEEK_V4_MODELS,
+  COMPACTION_MODEL,
+  supportsMultimodal,
+  defaultsToThinkingMode,
+} from "./common/model-capabilities";
 export { findGitBashPath, resolveShellPath, setShellIfWindows } from "./common/shell-utils";
 export { logApiError } from "./common/error-logger";
 export { logOpenAIChatCompletionDebug } from "./common/debug-logger";
