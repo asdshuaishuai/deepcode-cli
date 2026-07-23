@@ -795,7 +795,7 @@ export function App(): JSX.Element {
           aria-label={t("rail.index")}
           onClick={() => selectView("index")}
         >
-          ⚙
+          📚
         </RailButton>
         <RailSpacer />
         <RailButton title={reasoningTitle} aria-label={reasoningTitle} onClick={handleCycleReasoning}>

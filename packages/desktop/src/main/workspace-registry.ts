@@ -3,7 +3,7 @@
 // groups sessions by their originating workspace, and merges the desktop-only
 // archive sidecar so the renderer can render a VSCode-style workspace tree.
 
-import { getProjectCode, type SessionsIndex } from "@vegamo/deepcode-core";
+import { type SessionsIndex } from "@vegamo/deepcode-core";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -63,16 +63,12 @@ export function listWorkspaceSessions(currentRoot: string): WorkspaceSessions {
     }
   }
 
-  const currentCode = getProjectCode(currentRoot);
-  const seenCodes = new Set<string>();
-
   for (const code of projectDirs) {
     const indexPath = path.join(dir, code, "sessions-index.json");
     const index = readSessionsIndex(indexPath);
     if (!index) {
       continue;
     }
-    seenCodes.add(code);
     const root = index.originalPath;
     const label = path.basename(root) || root;
     const sessions: SerializableSessionEntry[] = [];
@@ -89,16 +85,11 @@ export function listWorkspaceSessions(currentRoot: string): WorkspaceSessions {
     workspaces.push({ root, label, projectCode: code, sessions });
   }
 
-  // Ensure the current workspace always appears even before its index exists.
-  if (!seenCodes.has(currentCode) && !workspaces.some((w) => w.root === currentRoot)) {
-    workspaces.push({
-      root: currentRoot,
-      label: path.basename(currentRoot) || currentRoot,
-      projectCode: currentCode,
-      sessions: [],
-    });
-  }
-
+  // Only workspaces that actually have a sessions-index.json on disk are listed.
+  // The current root is NOT force-injected as an empty workspace — if it has no
+  // sessions yet, it simply doesn't appear, so launching the app no longer treats
+  // the current directory (e.g. the home dir) as a workspace. It shows up the
+  // moment the user starts a real conversation there (which writes the index).
   workspaces.sort((a, b) => {
     if (a.root === currentRoot) {
       return -1;
