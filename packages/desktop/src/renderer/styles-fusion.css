@@ -280,42 +280,13 @@ body {
 }
 
 /* ===========================================================================
-   多彩磁贴点缀 — 状态徽章 / 工具名
+   多彩磁贴点缀 — 工具名(消息内容区)
 
    用饱和纯色 + inset 顶部受光高光 + 外投影,打破单一蓝调。
-   针对实际存在的元素:TopBar 的模型/思考徽章、token 徽章、工具卡里的工具名。
+   注意:TopBar 标题栏的徽章(model/thinking/tokens)刻意保持中性玻璃底,
+   不加彩色强调底——标题栏信息密集,彩色底会抢眼影响观感。多彩磁贴点缀
+   只用于消息内容区(用户气泡、工具名)等低密度区域。
    =========================================================================== */
-@media (prefers-reduced-motion: no-preference) {
-  .ui-topbar-thinking,
-  .ui-topbar-tokens,
-  .ui-tool-name {
-    animation: fusion-accent-shimmer 4s ease-in-out infinite;
-  }
-}
-/* 思考模式徽章 — 紫色磁贴(Win11 Fluent 标志色) */
-.ui-topbar-thinking {
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)), var(--fusion-accent);
-  color: #fff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 6px rgba(0, 0, 0, 0.35);
-}
-/* token 徽章 — 青色磁贴 */
-.ui-topbar-tokens {
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)), var(--fusion-info);
-  color: #fff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 6px rgba(0, 0, 0, 0.35);
-}
-/* 模型徽章 — 主蓝磁贴 */
-.ui-topbar-model {
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)), var(--fusion-primary);
-  color: #fff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 6px rgba(0, 0, 0, 0.35);
-}
 /* 工具卡里的工具名 — 玻璃磁贴底 + 顶部受光高光 */
 .ui-tool-name {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
