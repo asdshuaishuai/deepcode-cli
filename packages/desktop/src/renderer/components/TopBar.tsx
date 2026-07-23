@@ -60,7 +60,7 @@ export function TopBar({
   totalTokens,
 }: Props): JSX.Element {
   const { t } = useI18n();
-  const isWin = platform === "win32";
+  const isMac = platform === "darwin";
 
   // macOS traffic-light gumdrops sit at the far left (system convention).
   const macControls = (
@@ -121,7 +121,7 @@ export function TopBar({
 
   return (
     <div className="ui-window-bar">
-      {isWin ? null : macControls}
+      {isMac ? macControls : null}
 
       {/* Project / branch: "项目名 / 分支名" */}
       <div className="ui-topbar-project" title={projectRoot}>
@@ -220,7 +220,7 @@ export function TopBar({
         </Pill>
       ) : null}
 
-      {isWin ? winControls : null}
+      {isMac ? null : winControls}
     </div>
   );
 }
