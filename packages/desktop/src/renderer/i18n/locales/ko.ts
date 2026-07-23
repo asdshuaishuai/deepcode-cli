@@ -58,7 +58,7 @@ export const ko: Record<MessageKey, string> = {
 
   // ── Composer ──────────────────────────────────────────────
   "composer.respondAbove": "위 프롬프트에 먼저 응답하세요…",
-  "composer.askPlaceholder": "Deep Code에 빌드, 수정 또는 설명을 요청…",
+  "composer.askPlaceholder": "DeepOrca에 빌드, 수정 또는 설명을 요청…",
   "composer.stop": "중지",
   "composer.send": "보내기",
   "composer.planMode": "계획 모드",
@@ -76,7 +76,7 @@ export const ko: Record<MessageKey, string> = {
   "welcome.planTitle": "먼저 계획",
   "welcome.planDesc": "코드를 수정하기 전에 읽기 전용 계획을 작성합니다.",
   "welcome.initTitle": "AGENTS.md 생성",
-  "welcome.initDesc": "Deep Code가 에이전트를 위해 이 프로젝트를 문서화하도록 합니다.",
+  "welcome.initDesc": "DeepOrca가 에이전트를 위해 이 프로젝트를 문서화하도록 합니다.",
   "welcome.skillsTitle": "스킬 및 MCP",
   "welcome.skillsDesc": "플러그인을 탐색하고 작업에 스킬을 연결합니다.",
   "welcome.undoTitle": "실행 취소 및 복원",
@@ -161,7 +161,7 @@ export const ko: Record<MessageKey, string> = {
   "plugins.builtinSection": "내장 플러그인",
   "plugins.builtin.badge": "내장",
   "plugins.builtin.none": "내장 플러그인이 없습니다.",
-  "plugins.builtin.hint": "내장 플러그인은 Orca와 함께 제공되며 제거하거나 비활성화할 수 없습니다.",
+  "plugins.builtin.hint": "내장 플러그인은 DeepOrca와 함께 제공되며 제거하거나 비활성화할 수 없습니다.",
   "context.compaction": "컨텍스트",
 
   // ── Model modal ───────────────────────────────────────────
@@ -325,7 +325,7 @@ export const ko: Record<MessageKey, string> = {
 
   // ── Task panel ────────────────────────────────────────────
   "task.title": "계획",
-  "task.empty": "진행 중인 계획이 없습니다. Deep Code에 작성을 요청하세요.",
+  "task.empty": "진행 중인 계획이 없습니다. DeepOrca에 작성을 요청하세요.",
 
   // ── Source control panel ──────────────────────────────────
   "scm.title": "소스 제어",
@@ -351,7 +351,14 @@ export const ko: Record<MessageKey, string> = {
   "diff.noAgentChanges": "이 세션에는 에이전트 파일 변경이 없습니다.",
 
   // ── deepStudio branding + new features ────────────────────
-  "app.name": "orca",
+  "app.name": "DeepOrca",
+  "settings.tab.about": "정보",
+  "about.title": "DeepOrca 정보",
+  "about.intro":
+    "DeepOrca는 코딩 에이전트 데스크톱 GUI로, 오픈소스 프로젝트 @vegamo/deepcode-cli를 포크하여 DeepOrca로 다시 구축했습니다.",
+  "about.detail":
+    "Electron 데스크톱 앱으로 제공되며, 동일한 코어 엔진(LLM 세션 루프, 7개 내장 도구, MCP 클라이언트, 권한 시스템)으로 구동되고 DeepSeek 모델에 최적화되어 있습니다.",
+  "about.changelog": "변경 이력",
   "topbar.branch": "브랜치",
   "topbar.noBranch": "브랜치 없음",
   "topbar.thinkingModel": "사고 모델",

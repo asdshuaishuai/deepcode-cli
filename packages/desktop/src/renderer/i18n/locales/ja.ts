@@ -58,7 +58,7 @@ export const ja: Record<MessageKey, string> = {
 
   // ── Composer ──────────────────────────────────────────────
   "composer.respondAbove": "上のプロンプトに先に応答してください…",
-  "composer.askPlaceholder": "Deep Code に構築・修正・説明を依頼…",
+  "composer.askPlaceholder": "DeepOrca に構築・修正・説明を依頼…",
   "composer.stop": "停止",
   "composer.send": "送信",
   "composer.planMode": "プランモード",
@@ -76,7 +76,7 @@ export const ja: Record<MessageKey, string> = {
   "welcome.planTitle": "まず計画",
   "welcome.planDesc": "コードに触れる前に読み取り専用の計画を作成します。",
   "welcome.initTitle": "AGENTS.md を生成",
-  "welcome.initDesc": "Deep Code にこのプロジェクトをエージェント向けに記録させます。",
+  "welcome.initDesc": "DeepOrca にこのプロジェクトをエージェント向けに記録させます。",
   "welcome.skillsTitle": "スキルと MCP",
   "welcome.skillsDesc": "プラグインを閲覧し、タスクにスキルを付加します。",
   "welcome.undoTitle": "元に戻す・復元",
@@ -161,7 +161,7 @@ export const ja: Record<MessageKey, string> = {
   "plugins.builtinSection": "内蔵プラグイン",
   "plugins.builtin.badge": "内蔵",
   "plugins.builtin.none": "内蔵プラグインはありません。",
-  "plugins.builtin.hint": "内蔵プラグインは Orca に同梱されており、アンインストールや無効化はできません。",
+  "plugins.builtin.hint": "内蔵プラグインは DeepOrca に同梱されており、アンインストールや無効化はできません。",
   "context.compaction": "コンテキスト",
 
   // ── Model modal ───────────────────────────────────────────
@@ -325,7 +325,7 @@ export const ja: Record<MessageKey, string> = {
 
   // ── Task panel ────────────────────────────────────────────
   "task.title": "計画",
-  "task.empty": "進行中の計画はありません。Deep Code に作成を依頼してください。",
+  "task.empty": "進行中の計画はありません。DeepOrca に作成を依頼してください。",
 
   // ── Source control panel ──────────────────────────────────
   "scm.title": "ソース管理",
@@ -351,7 +351,14 @@ export const ja: Record<MessageKey, string> = {
   "diff.noAgentChanges": "このセッションにはエージェントによるファイル変更がありません。",
 
   // ── deepStudio branding + new features ────────────────────
-  "app.name": "orca",
+  "app.name": "DeepOrca",
+  "settings.tab.about": "について",
+  "about.title": "DeepOrca について",
+  "about.intro":
+    "DeepOrca はコーディングエージェントのデスクトップ GUI で、オープンソースプロジェクト @vegamo/deepcode-cli をフォークし、DeepOrca として再構築したものです。",
+  "about.detail":
+    "Electron デスクトップアプリとして提供され、同じコアエンジン(LLM セッションループ、7 つの組み込みツール、MCP クライアント、権限システム)で駆動し、DeepSeek モデルに最適化されています。",
+  "about.changelog": "変更履歴",
   "topbar.branch": "ブランチ",
   "topbar.noBranch": "ブランチなし",
   "topbar.thinkingModel": "思考モデル",

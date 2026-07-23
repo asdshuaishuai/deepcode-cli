@@ -59,7 +59,7 @@ export const zhHK: Record<MessageKey, string> = {
 
   // ── Composer ──────────────────────────────────────────────
   "composer.respondAbove": "請先回應上方的提示…",
-  "composer.askPlaceholder": "讓 Deep Code 建置、修復或說明…",
+  "composer.askPlaceholder": "讓 DeepOrca 建置、修復或說明…",
   "composer.stop": "停止",
   "composer.send": "傳送",
   "composer.planMode": "計劃模式",
@@ -77,7 +77,7 @@ export const zhHK: Record<MessageKey, string> = {
   "welcome.planTitle": "先規劃",
   "welcome.planDesc": "在變更程式碼前先草擬一份唯讀計劃。",
   "welcome.initTitle": "產生 AGENTS.md",
-  "welcome.initDesc": "讓 Deep Code 為代理記錄本專案。",
+  "welcome.initDesc": "讓 DeepOrca 為代理記錄本專案。",
   "welcome.skillsTitle": "技能與 MCP",
   "welcome.skillsDesc": "瀏覽外掛並為任務附加技能。",
   "welcome.undoTitle": "復原與還原",
@@ -162,7 +162,7 @@ export const zhHK: Record<MessageKey, string> = {
   "plugins.builtinSection": "內置插件",
   "plugins.builtin.badge": "內置",
   "plugins.builtin.none": "暫無內置插件。",
-  "plugins.builtin.hint": "內置插件隨 Orca 一起發佈，不可卸載或禁用。",
+  "plugins.builtin.hint": "內置插件隨 DeepOrca 一起發佈，不可卸載或禁用。",
   "context.compaction": "上下文",
 
   // ── Model modal ───────────────────────────────────────────
@@ -326,7 +326,7 @@ export const zhHK: Record<MessageKey, string> = {
 
   // ── Task panel ────────────────────────────────────────────
   "task.title": "計劃",
-  "task.empty": "尚無進行中的計劃。讓 Deep Code 草擬一份吧。",
+  "task.empty": "尚無進行中的計劃。讓 DeepOrca 草擬一份吧。",
 
   // ── Source control panel ──────────────────────────────────
   "scm.title": "原始碼控制",
@@ -352,7 +352,14 @@ export const zhHK: Record<MessageKey, string> = {
   "diff.noAgentChanges": "本工作階段沒有 Agent 檔案變更。",
 
   // ── deepStudio branding + new features ────────────────────
-  "app.name": "orca",
+  "app.name": "DeepOrca",
+  "settings.tab.about": "關於",
+  "about.title": "關於 DeepOrca",
+  "about.intro":
+    "DeepOrca 是一款編碼智能體桌面客戶端,基於開源項目 @vegamo/deepcode-cli fork 構建,並重塑命名為 DeepOrca。",
+  "about.detail":
+    "它以 Electron 桌面應用形式發佈,由相同的核心引擎驅動(LLM 會話循環、7 個內置工具、MCP 客戶端、權限系統),針對 DeepSeek 模型調優。",
+  "about.changelog": "更新日誌",
   "topbar.branch": "分支",
   "topbar.noBranch": "無分支",
   "topbar.thinkingModel": "思考模型",

@@ -25,7 +25,7 @@ import { archiveSession, unarchiveSession } from "./archive-store.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Product/brand name — drives the macOS menu-bar app name and Windows taskbar grouping.
-app.setName("orca");
+app.setName("DeepOrca");
 
 // Point the CodeGraph resolver at the copy we vendor next to the built app
 // (packages/desktop/vendor/codegraph). When absent (not yet vendored), the core
@@ -100,7 +100,7 @@ function createWindow(): void {
     minWidth: 720,
     minHeight: 480,
     backgroundColor: isWin ? "#1d1d1d" : "#e7ecf2",
-    title: "orca",
+    title: "DeepOrca",
     autoHideMenuBar: true,
     // frame:false 已隐藏原生标题栏和红绿灯(macOS)/标题栏(Windows)。
     // 不再设置 titleBarStyle — 它会导致 macOS 原生 traffic lights 仍然显示。

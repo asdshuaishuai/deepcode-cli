@@ -403,10 +403,11 @@ select {
   position: relative;
   /* Bottom padding is set dynamically to the composer-dock height (plus a
      small breathing gap) by App.tsx via a ResizeObserver, so the last
-     message never sits underneath the floating composer. The 220px fallback
-     is enough for the typical composer (toolbar + textarea + dock padding)
-     before the observer has had a chance to run on first paint. */
-  padding: var(--ui-space-5) var(--ui-space-4) var(--ui-composer-reserved, 220px);
+     message never sits underneath the floating composer. The 360px
+     fallback covers the worst-case composer (max-height textarea +
+     toolbar + dock padding + a tall attachments strip) before the
+     observer has had a chance to run on first paint. */
+  padding: var(--ui-space-5) var(--ui-space-4) var(--ui-composer-reserved, 360px);
   /* Virtual padding for scrollIntoView so the snap-to-bottom leaves a
      visual gap above the composer instead of pinning the last line to
      the very edge. Combined with the ResizeObserver-driven padding
@@ -2131,6 +2132,52 @@ button.ui-tool-head:hover {
 .ui-lang-chip:focus-visible {
   outline: 2px solid var(--ui-focus-ring);
   outline-offset: 1px;
+}
+
+/* ── About / changelog (Settings › About) ───────────────────────────────── */
+.ui-about-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ui-text-dim);
+}
+.ui-changelog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-4);
+  margin-top: 6px;
+}
+.ui-changelog-entry {
+  border-left: 2px solid var(--ui-accent-soft);
+  padding-left: var(--ui-space-3);
+}
+.ui-changelog-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ui-space-2);
+  margin-bottom: 6px;
+}
+.ui-changelog-version {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+.ui-changelog-date {
+  font-size: 11px;
+  color: var(--ui-text-faint);
+  font-family: var(--ui-font-mono);
+}
+.ui-changelog-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ui-changelog-list li {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ui-text-dim);
 }
 .ui-mcp-editor {
   display: flex;

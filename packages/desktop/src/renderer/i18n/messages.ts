@@ -64,7 +64,7 @@ export const en = {
 
   // ── Composer ──────────────────────────────────────────────
   "composer.respondAbove": "Respond to the prompt above…",
-  "composer.askPlaceholder": "Ask Deep Code to build, fix, or explain…",
+  "composer.askPlaceholder": "Ask DeepOrca to build, fix, or explain…",
   "composer.stop": "Stop",
   "composer.send": "Send",
   "composer.planMode": "Plan mode",
@@ -82,7 +82,7 @@ export const en = {
   "welcome.planTitle": "Plan first",
   "welcome.planDesc": "Draft a read-only plan before touching code.",
   "welcome.initTitle": "Generate AGENTS.md",
-  "welcome.initDesc": "Let Deep Code document this project for agents.",
+  "welcome.initDesc": "Let DeepOrca document this project for agents.",
   "welcome.skillsTitle": "Skills & MCP",
   "welcome.skillsDesc": "Browse plugins and attach skills to a task.",
   "welcome.undoTitle": "Undo & restore",
@@ -166,7 +166,7 @@ export const en = {
   "plugins.detail.docError": "Could not read SKILL.md.",
   "plugins.builtin.badge": "Built-in",
   "plugins.builtin.none": "No built-in plugins available.",
-  "plugins.builtin.hint": "Built-in plugins ship with Orca and cannot be uninstalled or disabled.",
+  "plugins.builtin.hint": "Built-in plugins ship with DeepOrca and cannot be uninstalled or disabled.",
   "context.compaction": "Context",
 
   // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
@@ -331,7 +331,7 @@ export const en = {
 
   // ── Task panel ────────────────────────────────────────────
   "task.title": "Plan",
-  "task.empty": "No active plan yet. Ask Deep Code to draft one.",
+  "task.empty": "No active plan yet. Ask DeepOrca to draft one.",
 
   // ── Source control panel ──────────────────────────────────
   "scm.title": "Source Control",
@@ -357,7 +357,14 @@ export const en = {
   "diff.noAgentChanges": "No agent file changes in this session.",
 
   // ── deepStudio branding + new features ────────────────────
-  "app.name": "orca",
+  "app.name": "DeepOrca",
+  "settings.tab.about": "About",
+  "about.title": "About DeepOrca",
+  "about.intro":
+    "DeepOrca is a coding-agent desktop GUI, forked from the open-source @vegamo/deepcode-cli project and rebuilt as DeepOrca.",
+  "about.detail":
+    "It ships as an Electron desktop app driven by the same core engine (LLM session loop, 7 built-in tools, MCP client, permissions), tuned for DeepSeek models.",
+  "about.changelog": "Changelog",
   "topbar.branch": "Branch",
   "topbar.noBranch": "No branch",
   "topbar.thinkingModel": "Thinking",
@@ -474,7 +481,7 @@ export const zh: Record<MessageKey, string> = {
 
   // ── Composer ──────────────────────────────────────────────
   "composer.respondAbove": "请先回应上方的提示…",
-  "composer.askPlaceholder": "让 Deep Code 构建、修复或解释…",
+  "composer.askPlaceholder": "让 DeepOrca 构建、修复或解释…",
   "composer.stop": "停止",
   "composer.send": "发送",
   "composer.planMode": "计划模式",
@@ -492,7 +499,7 @@ export const zh: Record<MessageKey, string> = {
   "welcome.planTitle": "先规划",
   "welcome.planDesc": "在改动代码前先起草一份只读计划。",
   "welcome.initTitle": "生成 AGENTS.md",
-  "welcome.initDesc": "让 Deep Code 为智能体记录本项目。",
+  "welcome.initDesc": "让 DeepOrca 为智能体记录本项目。",
   "welcome.skillsTitle": "技能与 MCP",
   "welcome.skillsDesc": "浏览插件并为任务附加技能。",
   "welcome.undoTitle": "撤销与恢复",
@@ -577,7 +584,7 @@ export const zh: Record<MessageKey, string> = {
   "plugins.builtinSection": "内置插件",
   "plugins.builtin.badge": "内置",
   "plugins.builtin.none": "暂无内置插件。",
-  "plugins.builtin.hint": "内置插件随 Orca 一起发布，不可卸载或禁用。",
+  "plugins.builtin.hint": "内置插件随 DeepOrca 一起发布，不可卸载或禁用。",
   "context.compaction": "上下文",
 
   // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
@@ -741,7 +748,7 @@ export const zh: Record<MessageKey, string> = {
 
   // ── Task panel ────────────────────────────────────────────
   "task.title": "计划",
-  "task.empty": "暂无进行中的计划。让 Deep Code 起草一份吧。",
+  "task.empty": "暂无进行中的计划。让 DeepOrca 起草一份吧。",
 
   // ── Source control panel ──────────────────────────────────
   "scm.title": "源代码管理",
@@ -767,7 +774,14 @@ export const zh: Record<MessageKey, string> = {
   "diff.noAgentChanges": "本会话没有 Agent 文件改动。",
 
   // ── deepStudio branding + new features ────────────────────
-  "app.name": "orca",
+  "app.name": "DeepOrca",
+  "settings.tab.about": "关于",
+  "about.title": "关于 DeepOrca",
+  "about.intro":
+    "DeepOrca 是一款编码智能体桌面客户端,基于开源项目 @vegamo/deepcode-cli fork 构建,并重塑命名为 DeepOrca。",
+  "about.detail":
+    "它以 Electron 桌面应用形式发布,由相同的核心引擎驱动(LLM 会话循环、7 个内置工具、MCP 客户端、权限系统),针对 DeepSeek 模型调优。",
+  "about.changelog": "更新日志",
   "topbar.branch": "分支",
   "topbar.noBranch": "无分支",
   "topbar.thinkingModel": "思考模型",

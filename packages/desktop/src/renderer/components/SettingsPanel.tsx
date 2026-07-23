@@ -34,7 +34,7 @@ type Props = {
   onSelectTheme: (theme: Theme) => void;
 };
 
-type Tab = "connection" | "language" | "model" | "permissions" | "tokens";
+type Tab = "connection" | "language" | "model" | "permissions" | "tokens" | "about";
 
 const TABS: { id: Tab; labelKey: MessageKey }[] = [
   { id: "connection", labelKey: "settings.tab.connection" },
@@ -42,6 +42,7 @@ const TABS: { id: Tab; labelKey: MessageKey }[] = [
   { id: "model", labelKey: "settings.tab.model" },
   { id: "permissions", labelKey: "settings.tab.permissions" },
   { id: "tokens", labelKey: "settings.tab.tokens" },
+  { id: "about", labelKey: "settings.tab.about" },
 ];
 
 const TAB_ICONS: Record<Tab, string> = {
@@ -50,6 +51,7 @@ const TAB_ICONS: Record<Tab, string> = {
   model: "✦",
   permissions: "🔒",
   tokens: "📊",
+  about: "ℹ",
 };
 
 const PERMISSION_SCOPES: PermissionScope[] = [
@@ -70,6 +72,45 @@ const DECISIONS: PermissionDecision[] = ["default", "allow", "ask", "deny"];
 const REASONING_OPTIONS: ReasoningEffort[] = ["max", "high"];
 
 const LOCALE_OPTIONS: Locale[] = ["zh", "zh-TW", "zh-HK", "en", "ja", "ko"];
+
+/** Changelog since the fork from the upstream deepcode-cli repository. */
+const CHANGELOG: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: "v0.1.0",
+    date: "2026-07",
+    changes: [
+      "基于 @vegamo/deepcode-cli (v0.1.34) fork 构建,命名为 DeepOrca,新增 Electron 桌面客户端。",
+      "新增 Aqua(macOS 原生)、Metro/Fluent(Windows 8 磁贴骨架)双主题体系。",
+      "建立语义化 design-token 系统(--ui-* 变量),为后续主题切换奠定基础。",
+    ],
+  },
+  {
+    version: "v0.2.0",
+    date: "2026-07",
+    changes: [
+      "CLI 能力全面移植到桌面端,新增进程输出面板、文件提及菜单。",
+      "消息渲染现代化:支持思考过程、代码高亮、diff 覆盖层、可折叠工具卡。",
+      "新增 Token 消耗分析面板(工作区维度统计 + bento 网格)。",
+    ],
+  },
+  {
+    version: "v0.3.0",
+    date: "2026-07",
+    changes: [
+      "重塑品牌为 Orca,新增内置插件系统(BrowserSkill 等),与 Skills/MCP 并列的第三扩展类型。",
+      "新增毛玻璃(Glass)主题,Linux 默认、macOS 可选。",
+    ],
+  },
+  {
+    version: "v0.4.0",
+    date: "2026-07",
+    changes: [
+      "新增 Fusion 主题:融合 Win8 磁贴多彩配色 × Win11 玻璃呼吸色 × 磁铁按钮质感,Windows 专属。",
+      "设置面板新增「常规」Tab,内置平台感知的主题选择(Windows: Metro/Fusion)。",
+      "索引库 rail 图标独立化(☷);启动不再将当前目录强行注入为空工作区。",
+    ],
+  },
+];
 
 /** Settings surface rendered inline in the main area (no modal shell). */
 export function SettingsPanel({
@@ -333,6 +374,35 @@ export function SettingsPanel({
             ) : null}
 
             {tab === "tokens" ? <TokenAnalytics tree={tree} fallbackSessions={sessions} /> : null}
+
+            {tab === "about" ? (
+              <>
+                <section className="ui-settings-section">
+                  <div className="ui-settings-section-title">{t("about.title")}</div>
+                  <p className="ui-about-desc">{t("about.intro")}</p>
+                  <p className="ui-about-desc">{t("about.detail")}</p>
+                </section>
+
+                <section className="ui-settings-section">
+                  <div className="ui-settings-section-title">{t("about.changelog")}</div>
+                  <div className="ui-changelog">
+                    {CHANGELOG.map((entry) => (
+                      <div key={entry.version} className="ui-changelog-entry">
+                        <div className="ui-changelog-head">
+                          <span className="ui-changelog-version">{entry.version}</span>
+                          <span className="ui-changelog-date">{entry.date}</span>
+                        </div>
+                        <ul className="ui-changelog-list">
+                          {entry.changes.map((change, idx) => (
+                            <li key={idx}>{change}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
