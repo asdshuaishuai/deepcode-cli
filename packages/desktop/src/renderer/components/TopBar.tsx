@@ -44,6 +44,27 @@ function currentThinkingKey(s: SettingsSummary): string {
   return s.reasoningEffort === "high" ? "high" : "max";
 }
 
+// Window caption glyphs as inline SVG (Windows 11 Fluent style). 1.5px stroke
+// at 12px render size gives a crisp 1.5px line; `currentColor` lets the
+// theme dictate the foreground via the existing --ui-text-dim / --ui-text /
+// --ui-danger palette.
+const ICON_MIN = (
+  <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false">
+    <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+const ICON_MAX_RESTORE = (
+  <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false">
+    <rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+  </svg>
+);
+const ICON_CLOSE = (
+  <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false">
+    <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 /** Slim draggable window bar: window controls + project/branch + dual model selectors + token mini. */
 export function TopBar({
   platform,
@@ -95,7 +116,7 @@ export function TopBar({
         title={t("window.minimize")}
         onClick={() => void api.minimizeWindow()}
       >
-        &#x2014;
+        {ICON_MIN}
       </button>
       <button
         className="ui-win-ctrl max"
@@ -103,7 +124,7 @@ export function TopBar({
         title={t("window.zoom")}
         onClick={() => void api.toggleMaximizeWindow()}
       >
-        &#x25A1;
+        {ICON_MAX_RESTORE}
       </button>
       <button
         className="ui-win-ctrl close"
@@ -111,7 +132,7 @@ export function TopBar({
         title={t("window.close")}
         onClick={() => void api.closeWindow()}
       >
-        &#x2715;
+        {ICON_CLOSE}
       </button>
     </div>
   );

@@ -1071,6 +1071,7 @@ select {
   border-radius: var(--ui-radius-md);
   padding: 0;
   max-width: 90%;
+  overflow: hidden;
 }
 .ui-thinking-toggle {
   display: flex;
@@ -1111,9 +1112,20 @@ select {
   font-size: 11px;
   color: var(--ui-text-faint);
 }
+/* The body holds the model's reasoning text. Long traces are common, so
+   cap the height at ~60vh and let the body scroll internally — the rest of
+   the conversation stays put and the user can read top-to-bottom without
+   losing context. */
 .ui-thinking-body {
-  padding: 0 var(--ui-space-3) var(--ui-space-3);
+  padding: var(--ui-space-2) var(--ui-space-3) var(--ui-space-3);
   border-top: 1px solid var(--ui-border-soft);
+  background: var(--ui-surface);
+  max-height: 60vh;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ui-text-dim);
+  scrollbar-width: thin;
 }
 
 /* ── Tool card ────────────────────────────────────────────────────────────── */
@@ -1205,7 +1217,11 @@ button.ui-tool-head:hover {
   color: var(--ui-danger);
 }
 
-/* Tool params (one-liner) */
+/* Tool params (one-liner).
+   The base color is --ui-text-faint so unrecognised tool types still
+   read as muted metadata, but per-tool-type accent rules below override
+   the color (and add a faint background tint) so each card family has
+   its own visual identity. */
 .ui-tool-params {
   color: var(--ui-text-faint);
   font-size: 12px;
@@ -1214,6 +1230,94 @@ button.ui-tool-head:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   padding-left: 28px;
+}
+
+/* Per-tool-type param & result accent. The colors echo the left-border
+   accent so the eye recognises the family at a glance, but tinted bright
+   enough to read on a sunken/raised surface (avoids the "all white text"
+   complaint that motivated this block). */
+.ui-tool-card.bash .ui-tool-params,
+.ui-tool-card.bash .ui-tool-params-inline,
+.ui-tool-card.bash .ui-tool-result-hint {
+  color: color-mix(in srgb, var(--ui-success) 80%, var(--ui-text));
+}
+.ui-tool-card.read .ui-tool-params,
+.ui-tool-card.read .ui-tool-params-inline,
+.ui-tool-card.read .ui-tool-result-hint {
+  color: color-mix(in srgb, var(--ui-accent) 85%, var(--ui-text));
+}
+.ui-tool-card.write .ui-tool-params,
+.ui-tool-card.write .ui-tool-params-inline,
+.ui-tool-card.write .ui-tool-result-hint {
+  color: #a5b4fc; /* indigo-300 — brighter than the 600 used for the border */
+}
+.ui-tool-card.edit .ui-tool-params,
+.ui-tool-card.edit .ui-tool-params-inline,
+.ui-tool-card.edit .ui-tool-result-hint {
+  color: #fcd34d; /* amber-300 */
+}
+.ui-tool-card.ask .ui-tool-params,
+.ui-tool-card.ask .ui-tool-params-inline,
+.ui-tool-card.ask .ui-tool-result-hint {
+  color: #d8b4fe; /* violet-300 */
+}
+.ui-tool-card.plan .ui-tool-params,
+.ui-tool-card.plan .ui-tool-params-inline,
+.ui-tool-card.plan .ui-tool-result-hint {
+  color: #7dd3fc; /* sky-300 */
+}
+.ui-tool-card.search .ui-tool-params,
+.ui-tool-card.search .ui-tool-params-inline,
+.ui-tool-card.search .ui-tool-result-hint {
+  color: #5eead4; /* teal-300 */
+}
+.ui-tool-card.mcp .ui-tool-params,
+.ui-tool-card.mcp .ui-tool-params-inline,
+.ui-tool-card.mcp .ui-tool-result-hint {
+  color: #f9a8d4; /* pink-300 */
+}
+.ui-tool-card.generic .ui-tool-params,
+.ui-tool-card.generic .ui-tool-params-inline,
+.ui-tool-card.generic .ui-tool-result-hint {
+  color: var(--ui-text-dim);
+}
+
+/* Result text: the markdown inside .ui-tool-result inherits the bubble
+   text color, which is var(--ui-text (white on Metro) — so it reads as a
+   single solid block. Tinting the result container + its left border per
+   tool type adds a subtle frame that says "this output came from <tool>"
+   without the user having to read the header. */
+.ui-tool-card.bash .ui-tool-result {
+  border-left-color: var(--ui-success);
+  background: color-mix(in srgb, var(--ui-success) 6%, transparent);
+}
+.ui-tool-card.read .ui-tool-result {
+  border-left-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 6%, transparent);
+}
+.ui-tool-card.write .ui-tool-result {
+  border-left-color: #6366f1;
+  background: color-mix(in srgb, #6366f1 6%, transparent);
+}
+.ui-tool-card.edit .ui-tool-result {
+  border-left-color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+}
+.ui-tool-card.ask .ui-tool-result {
+  border-left-color: #a855f7;
+  background: color-mix(in srgb, #a855f7 6%, transparent);
+}
+.ui-tool-card.plan .ui-tool-result {
+  border-left-color: #0ea5e9;
+  background: color-mix(in srgb, #0ea5e9 6%, transparent);
+}
+.ui-tool-card.search .ui-tool-result {
+  border-left-color: #14b8a6;
+  background: color-mix(in srgb, #14b8a6 6%, transparent);
+}
+.ui-tool-card.mcp .ui-tool-result {
+  border-left-color: #ec4899;
+  background: color-mix(in srgb, #ec4899 6%, transparent);
 }
 
 /* Tool-type accent bars (left border color) */
@@ -1380,12 +1484,64 @@ button.ui-tool-head:hover {
   background: none;
   padding: 0;
 }
-/* JSON block special styling */
-.ui-md pre.code-json {
+/* Code block language accent — the left border colour is the primary
+   visual cue since we don't ship a full syntax highlighter (bundle
+   weight). The colour for each language matches the tool-card family
+   that most often produces it (bash → green, json → amber, etc.) so the
+   eye builds a consistent mental model. */
+.ui-md pre.code-json,
+.ui-md pre.code-jsonc {
   border-left: 3px solid #f59e0b;
+  background: color-mix(in srgb, #f59e0b 5%, var(--ui-surface-sunken));
 }
-.ui-md pre.code-html {
+.ui-md pre.code-html,
+.ui-md pre.code-xml,
+.ui-md pre.code-svg {
   border-left: 3px solid #e879f9;
+  background: color-mix(in srgb, #e879f9 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-bash,
+.ui-md pre.code-sh,
+.ui-md pre.code-shell,
+.ui-md pre.code-zsh {
+  border-left: 3px solid var(--ui-success);
+  background: color-mix(in srgb, var(--ui-success) 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-typescript,
+.ui-md pre.code-tsx {
+  border-left: 3px solid #3b82f6;
+  background: color-mix(in srgb, #3b82f6 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-javascript,
+.ui-md pre.code-jsx {
+  border-left: 3px solid #fbbf24;
+  background: color-mix(in srgb, #fbbf24 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-python,
+.ui-md pre.code-py {
+  border-left: 3px solid #14b8a6;
+  background: color-mix(in srgb, #14b8a6 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-css,
+.ui-md pre.code-scss,
+.ui-md pre.code-less {
+  border-left: 3px solid #ec4899;
+  background: color-mix(in srgb, #ec4899 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-yaml,
+.ui-md pre.code-yml,
+.ui-md pre.code-toml {
+  border-left: 3px solid #a855f7;
+  background: color-mix(in srgb, #a855f7 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-markdown,
+.ui-md pre.code-md {
+  border-left: 3px solid var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 5%, var(--ui-surface-sunken));
+}
+.ui-md pre.code-diff {
+  border-left: 3px solid var(--ui-accent);
+  background: var(--ui-surface-sunken);
 }
 .ui-md a {
   color: var(--ui-accent);

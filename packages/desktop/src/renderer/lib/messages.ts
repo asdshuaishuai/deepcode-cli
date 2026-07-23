@@ -95,7 +95,45 @@ export function formatToolParams(summary: ToolSummary): string {
 }
 
 export function getResultMd(message: SessionMessage): string {
-  return typeof message.meta?.resultMd === "string" ? message.meta.resultMd.trim() : "";
+  const raw = typeof message.meta?.resultMd === "string" ? message.meta.resultMd.trim() : "";
+  if (!raw) return "";
+  return wrapPlainStructured(raw);
+}
+
+/**
+ * Detect bare structured payloads (JSON / HTML) that arrived without a fenced
+ * code block, and wrap them so the markdown renderer pretty-prints them and
+ * styles them with the per-language accent (amber for JSON, pink for HTML).
+ * MCP tool results frequently arrive as raw JSON without a code fence;
+ * web-fetch and similar tools return raw HTML. The result is the difference
+ * between a wall of single-line text and a readable indented document.
+ */
+function wrapPlainStructured(value: string): string {
+  if (value.includes("```")) return value; // already wrapped / multi-block
+  return wrapPlainJson(value) ?? wrapPlainHtml(value) ?? value;
+}
+
+function wrapPlainJson(value: string): string | null {
+  const first = value[0];
+  if (first !== "{" && first !== "[") return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed === null || typeof parsed !== "object") return null;
+    return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
+  } catch {
+    return null;
+  }
+}
+
+function wrapPlainHtml(value: string): string | null {
+  // Only treat clearly-HTML payloads as HTML source (otherwise the markdown
+  // renderer's inline-HTML pass might mis-render e.g. a leading "<" in some
+  // other format). Heuristic: DOCTYPE, <html …>, or a balanced root tag.
+  const head = value.slice(0, 200).toLowerCase();
+  const looksLikeDoc = head.startsWith("<!doctype html") || head.startsWith("<html");
+  const looksLikeRoot = /^<([a-z][\w-]*)(?:\s[^>]*)?>[\s\S]*<\/\1>/i.test(value.slice(0, 4096));
+  if (!looksLikeDoc && !looksLikeRoot) return null;
+  return "```html\n" + value + "\n```";
 }
 
 export function getDiffLines(summary: ToolSummary): DiffLine[] {

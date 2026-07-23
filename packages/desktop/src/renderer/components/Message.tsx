@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import type { SessionMessage } from "../../shared/ipc";
 import type { ReasoningMode } from "../lib/appearance";
 import { renderMarkdown } from "../markdown";
@@ -65,6 +65,7 @@ function ThinkingBlock({
   const summary = buildThinkingSummary(content, messageParams);
   // Auto-expand the latest thinking block; older ones auto-collapse.
   const [expanded, setExpanded] = useState(reasoningMode === "expanded" || isLatest);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   // Sync when a newer thinking block arrives (isLatest changes).
   useEffect(() => {
@@ -75,19 +76,29 @@ function ThinkingBlock({
     }
   }, [isLatest, reasoningMode]);
 
+  // When the user expands an older thinking block (or it auto-expands on a
+  // new message), scroll the top of the body into view. block: "nearest"
+  // avoids hijacking scroll position when the body is already fully on
+  // screen, so this is a non-intrusive nudge rather than a forced jump.
+  useEffect(() => {
+    if (expanded && bodyRef.current) {
+      bodyRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [expanded]);
+
   if (reasoningMode === "hidden") return null;
 
   return (
     <div className="ui-bubble-row assistant">
       <div className="ui-bubble thinking">
-        <button className="ui-thinking-toggle" onClick={() => setExpanded((v) => !v)}>
+        <button className="ui-thinking-toggle" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
           <span className="ui-thinking-icon">{expanded ? "🧠" : "💭"}</span>
           <span className="ui-thinking-label">{t("msg.thinking")}</span>
           <span className="ui-thinking-summary">{truncate(summary || t("msg.reasoning"), 80)}</span>
           <span className="ui-thinking-chevron">{expanded ? "▾" : "▸"}</span>
         </button>
         {expanded && content ? (
-          <div className="ui-thinking-body">
+          <div className="ui-thinking-body" ref={bodyRef}>
             <Md text={content} />
           </div>
         ) : null}
