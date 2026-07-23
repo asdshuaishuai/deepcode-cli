@@ -310,16 +310,16 @@ select {
   gap: 8px;
 }
 
-/* Windows caption buttons — compact grouped container, inset from right edge. */
+/* Windows / Linux caption buttons — naked, no chrome container, larger right inset. */
 .ui-window-controls.win {
-  align-self: center;
-  gap: 2px;
-  margin-left: auto;
-  margin-right: var(--ui-space-3);
-  padding: 3px;
-  background: var(--ui-surface-hover);
-  border: 1px solid var(--ui-border-soft);
-  border-radius: var(--ui-radius-md);
+  align-self: stretch;
+  gap: 0;
+  margin-left: var(--ui-space-3);
+  margin-right: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
 }
 
 .ui-gumdrop {
@@ -341,21 +341,30 @@ select {
 }
 
 .ui-win-ctrl {
-  width: 32px;
-  height: 26px;
+  width: 46px;
+  height: 100%;
+  min-height: 36px;
   display: grid;
   place-items: center;
   color: var(--ui-text-dim);
-  font-size: 11px;
-  border-radius: var(--ui-radius-sm);
-  transition:
-    background 0.12s ease,
-    color 0.12s ease;
+  font-size: 13px;
+  line-height: 1;
+  background: transparent;
+  border-radius: 0;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 .ui-win-ctrl:hover {
   background: var(--ui-surface-hover);
+  color: var(--ui-text);
+}
+.ui-win-ctrl:active {
+  background: var(--ui-surface-active);
 }
 .ui-win-ctrl.close:hover {
+  background: var(--ui-danger);
+  color: #fff;
+}
+.ui-win-ctrl.close:active {
   background: var(--ui-danger);
   color: #fff;
 }
