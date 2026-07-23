@@ -20,7 +20,7 @@ function Md({ text }: { text: string }): JSX.Element {
 /** Map tool name → CSS modifier for visual differentiation. */
 function toolCls(name: string): string {
   const n = name.toLowerCase();
-  if (n === "bash") return "bash";
+  if (n === "bash" || n === "cli") return "bash";
   if (n === "read") return "read";
   if (n === "write") return "write";
   if (n === "edit") return "edit";
@@ -38,7 +38,7 @@ function toolCls(name: string): string {
  */
 function toolIcon(name: string): JSX.Element {
   const n = name.toLowerCase();
-  if (n === "bash") return <BashTerminalIcon />;
+  if (n === "bash" || n === "cli") return <BashTerminalIcon />;
   if (n === "read") return <span aria-hidden="true">📖</span>;
   if (n === "write") return <span aria-hidden="true">📝</span>;
   if (n === "edit") return <span aria-hidden="true">✏️</span>;
@@ -251,12 +251,16 @@ function AssistantBubble({ message }: { message: SessionMessage }): JSX.Element 
 }
 
 // ── Tool card (differentiated by tool type) ───────────────────────────────────
-// File-targeting tools (read/write/edit) collapse their full body by default
-// so the chat stays scannable; the header doubles as an expand toggle and
-// surfaces the file path inline so the user can identify the file without
-// expanding. Other tools (bash/ask/plan/search/mcp) keep their content
-// visible — their result remains individually collapsible as before.
-const FILE_TOOLS = new Set(["read", "write", "edit"]);
+// Collapsible tool families: read/write/edit/bash/cli. Their cards default
+// to folded so the chat stays scannable; the header doubles as an expand
+// toggle and surfaces the file path / command inline so the user can
+// identify the operation without expanding. Bash cards additionally show
+// the result hint (exit code / first line) in the header so the outcome
+// is visible at a glance — no need to expand to see "did it work?".
+// Other tools (ask/plan/search/mcp) keep their content visible — their
+// result remains individually collapsible as before.
+const COLLAPSIBLE_TOOLS = new Set(["read", "write", "edit", "bash", "cli"]);
+const SHOW_RESULT_HINT_IN_HEADER = new Set(["bash", "cli"]);
 
 function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
   const { t } = useI18n();
@@ -268,21 +272,28 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
   const toolClass = toolCls(summary.name);
   const isMcp = summary.name.toLowerCase().startsWith("mcp__");
   const displayName = isMcp ? summary.name.replace(/^mcp__/, "").replace(/__/g, " · ") : formatStatusName(summary.name);
-  const isFileTool = FILE_TOOLS.has(summary.name.toLowerCase());
+  const isFileTool = COLLAPSIBLE_TOOLS.has(summary.name.toLowerCase());
+  const showHeaderHint = SHOW_RESULT_HINT_IN_HEADER.has(summary.name.toLowerCase());
   const [bodyOpen, setBodyOpen] = useState(!isFileTool);
   const [resultOpen, setResultOpen] = useState(false);
 
-  // The header element is a button for file tools (so the whole card is
-  // clickable to expand/collapse) and a plain div for other tools, where
-  // the header is just visual metadata.
+  // The header element is a button for collapsible tools (so the whole
+  // card is clickable to expand/collapse) and a plain div for other
+  // tools, where the header is just visual metadata.
   const headerInner = (
     <>
       <span className="ui-tool-icon">{toolIcon(summary.name)}</span>
       <span className="ui-tool-name">{displayName}</span>
-      {/* File tools surface the file path inline so the user can identify
-         which file they're looking at without expanding the card. */}
+      {/* Collapsible tools surface the file path / command inline so the
+         user can identify the operation without expanding the card. */}
       {isFileTool && params ? <span className="ui-tool-params-inline">{params}</span> : null}
       {summary.ok ? null : <span className="ui-tool-badge err">✗</span>}
+      {/* Bash cards show the result hint (exit code, first line) in the
+         header — the user shouldn't have to expand to know whether the
+         command succeeded. */}
+      {showHeaderHint && resultMd && !bodyOpen ? (
+        <ResultHint toolName={summary.name} metadata={summary.metadata} resultMd={resultMd} />
+      ) : null}
       {isFileTool ? <span className="ui-tool-chevron">{bodyOpen ? "▾" : "▸"}</span> : null}
     </>
   );

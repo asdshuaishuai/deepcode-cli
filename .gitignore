@@ -18,6 +18,7 @@ out/
 .deepcode/settings.json
 .qoder/
 .superpowers/
+.zcode/
 
 # TypeScript build info files
 *.tsbuildinfo

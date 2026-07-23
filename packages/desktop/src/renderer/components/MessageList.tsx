@@ -25,7 +25,16 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
   // conversation. The auto-scroll effect only follows the stream when
   // they are; if they've scrolled up to read something, new content
   // arrives silently instead of yanking them back down.
+  //
+  // We mirror `stuckToBottom` into a ref so the auto-scroll effect can
+  // read the current value without re-running on every scroll tick.
+  // (If the effect listed `stuckToBottom` in its deps, the act of
+  // scrolling toward the bottom would flip state to true, re-run the
+  // effect, and call `scrollIntoView({ behavior: "smooth" })` —
+  // yanking the user to the very bottom and preventing them from
+  // stopping at an intermediate position. The reported bug.)
   const [stuckToBottom, setStuckToBottom] = useState(true);
+  const stuckToBottomRef = useRef(true);
 
   // Recompute stuck-state on scroll, on resize, and on content changes
   // (because the scroll position is now in a different "place" relative
@@ -36,7 +45,9 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
     if (!el) return;
     const update = () => {
       const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setStuckToBottom(distance < 80);
+      const next = distance < 80;
+      stuckToBottomRef.current = next;
+      setStuckToBottom(next);
     };
     update();
     el.addEventListener("scroll", update, { passive: true });
@@ -48,16 +59,21 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
     };
   }, [hasActiveSession]);
 
+  // Auto-scroll when new content arrives — gated on the *ref* so that
+  // a manual scroll toward the bottom (which sets stuckToBottom = true)
+  // does NOT immediately re-trigger a smooth scroll. The next content
+  // change is the moment we follow; pure scroll motion is left alone.
   useEffect(() => {
-    if (!stuckToBottom) return;
+    if (!stuckToBottomRef.current) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, footer, stuckToBottom]);
+  }, [messages, footer]);
 
   // If the user clicks into the conversation from elsewhere (or expands
   // a thinking block and then scrolls back), keep them pinned by
   // manually forcing a re-evaluation. A dedicated "jump to latest" pill
   // is rendered in the JSX below; clicking it re-engages follow mode.
   const handleJumpToLatest = (): void => {
+    stuckToBottomRef.current = true;
     setStuckToBottom(true);
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   };
