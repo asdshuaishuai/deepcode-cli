@@ -107,6 +107,13 @@ function AssistantBubble({ message }: { message: SessionMessage }): JSX.Element 
 }
 
 // ── Tool card (differentiated by tool type) ───────────────────────────────────
+// File-targeting tools (read/write/edit) collapse their full body by default
+// so the chat stays scannable; the header doubles as an expand toggle and
+// surfaces the file path inline so the user can identify the file without
+// expanding. Other tools (bash/ask/plan/search/mcp) keep their content
+// visible — their result remains individually collapsible as before.
+const FILE_TOOLS = new Set(["read", "write", "edit"]);
+
 function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
   const { t } = useI18n();
   const summary = buildToolSummary(message);
@@ -117,53 +124,78 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
   const vis = toolVisual(summary.name);
   const isMcp = summary.name.toLowerCase().startsWith("mcp__");
   const displayName = isMcp ? summary.name.replace(/^mcp__/, "").replace(/__/g, " · ") : formatStatusName(summary.name);
+  const isFileTool = FILE_TOOLS.has(summary.name.toLowerCase());
+  const [bodyOpen, setBodyOpen] = useState(!isFileTool);
   const [resultOpen, setResultOpen] = useState(false);
 
+  // The header element is a button for file tools (so the whole card is
+  // clickable to expand/collapse) and a plain div for other tools, where
+  // the header is just visual metadata.
+  const headerInner = (
+    <>
+      <span className="ui-tool-icon">{vis.icon}</span>
+      <span className="ui-tool-name">{displayName}</span>
+      {/* File tools surface the file path inline so the user can identify
+         which file they're looking at without expanding the card. */}
+      {isFileTool && params ? <span className="ui-tool-params-inline">{params}</span> : null}
+      {summary.ok ? null : <span className="ui-tool-badge err">✗</span>}
+      {isFileTool ? <span className="ui-tool-chevron">{bodyOpen ? "▾" : "▸"}</span> : null}
+    </>
+  );
+
   return (
-    <div className={`ui-tool-card ${vis.cls}${summary.ok ? "" : " err"}`}>
-      {/* Header: icon + name + params */}
-      <div className="ui-tool-head">
-        <span className="ui-tool-icon">{vis.icon}</span>
-        <span className="ui-tool-name">{displayName}</span>
-        {summary.ok ? null : <span className="ui-tool-badge err">✗</span>}
-      </div>
-      {/* Params (one-liner) */}
-      {params ? <div className="ui-tool-params">{params}</div> : null}
-      {/* Diff preview for edit/write */}
-      {diffLines.length > 0 ? (
-        <div className="ui-diff">
-          {diffLines.map((line, i) => (
-            <div key={i} className={line.kind === "added" ? "add" : line.kind === "removed" ? "del" : "ctx"}>
-              {line.marker}
-              {line.content}
-            </div>
-          ))}
-        </div>
-      ) : null}
-      {/* Plan lines for UpdatePlan */}
-      {planLines.length > 0 ? (
-        <div className="ui-tool-plan">
-          <div className="ui-tool-plan-label">📋 {t("msg.plan")}</div>
-          <div className="ui-tool-plan-body">{planLines.join("\n")}</div>
-        </div>
-      ) : null}
-      {/* Collapsible result */}
-      {resultMd ? (
-        <div className="ui-tool-result-wrap">
-          <button className="ui-tool-result-toggle" onClick={() => setResultOpen((v) => !v)}>
-            <span>{resultOpen ? "▾" : "▸"}</span>
-            <span>{t("msg.result")}</span>
-            {!resultOpen ? (
-              <span className="ui-tool-result-hint"> ({truncate(resultMd.replace(/\s+/g, " "), 60)})</span>
-            ) : null}
-          </button>
-          {resultOpen ? (
-            <div className="ui-tool-result">
-              <Md text={resultMd} />
+    <div
+      className={`ui-tool-card ${vis.cls}${summary.ok ? "" : " err"}${isFileTool ? " collapsible" : ""}${isFileTool && bodyOpen ? " open" : ""}`}
+    >
+      {isFileTool ? (
+        <button type="button" className="ui-tool-head" onClick={() => setBodyOpen((v) => !v)}>
+          {headerInner}
+        </button>
+      ) : (
+        <div className="ui-tool-head">{headerInner}</div>
+      )}
+      {/* Non-file tools keep the params on a separate line (current behavior). */}
+      {!isFileTool && params ? <div className="ui-tool-params">{params}</div> : null}
+      {/* Body — for file tools, only rendered when expanded. */}
+      {(!isFileTool || bodyOpen) && (
+        <>
+          {/* Diff preview for edit/write */}
+          {diffLines.length > 0 ? (
+            <div className="ui-diff">
+              {diffLines.map((line, i) => (
+                <div key={i} className={line.kind === "added" ? "add" : line.kind === "removed" ? "del" : "ctx"}>
+                  {line.marker}
+                  {line.content}
+                </div>
+              ))}
             </div>
           ) : null}
-        </div>
-      ) : null}
+          {/* Plan lines for UpdatePlan */}
+          {planLines.length > 0 ? (
+            <div className="ui-tool-plan">
+              <div className="ui-tool-plan-label">📋 {t("msg.plan")}</div>
+              <div className="ui-tool-plan-body">{planLines.join("\n")}</div>
+            </div>
+          ) : null}
+          {/* Collapsible result */}
+          {resultMd ? (
+            <div className="ui-tool-result-wrap">
+              <button className="ui-tool-result-toggle" onClick={() => setResultOpen((v) => !v)}>
+                <span>{resultOpen ? "▾" : "▸"}</span>
+                <span>{t("msg.result")}</span>
+                {!resultOpen ? (
+                  <span className="ui-tool-result-hint"> ({truncate(resultMd.replace(/\s+/g, " "), 60)})</span>
+                ) : null}
+              </button>
+              {resultOpen ? (
+                <div className="ui-tool-result">
+                  <Md text={resultMd} />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

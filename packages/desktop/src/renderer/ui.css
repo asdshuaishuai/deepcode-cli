@@ -282,7 +282,11 @@ select {
   display: flex;
   align-items: center;
   gap: var(--ui-space-3);
-  padding: 0 0 0 var(--ui-space-4);
+  /* Right padding gives the Windows close button a few pixels of breathing
+     room from the window edge so it isn't visually clipped by the bar's
+     right border. Left padding keeps the project/branch group from kissing
+     the rail. */
+  padding: 0 var(--ui-space-2) 0 var(--ui-space-4);
   min-width: 0;
   background: var(--ui-surface);
   border-bottom: 1px solid var(--ui-border-soft);
@@ -310,12 +314,17 @@ select {
   gap: 8px;
 }
 
-/* Windows / Linux caption buttons — naked, no chrome container, larger right inset. */
+/* Windows / Linux caption buttons — naked, no chrome container.
+   Note: explicit width keeps the three buttons from being squeezed or pushed
+   off the right edge by the preceding flex items. Earlier revisions tried
+   negative margin-right to bleed the controls toward the window edge; that
+   caused the close button to be clipped by the window's content area. */
 .ui-window-controls.win {
   align-self: stretch;
+  flex: none;
   gap: 0;
   margin-left: var(--ui-space-3);
-  margin-right: 32px;
+  margin-right: 0;
   padding: 0;
   background: none;
   border: 0;
@@ -391,7 +400,12 @@ select {
 .ui-conversation {
   flex: 1;
   overflow-y: auto;
-  padding: var(--ui-space-5) var(--ui-space-4) 160px;
+  /* Bottom padding is set dynamically to the composer-dock height (plus a
+     small breathing gap) by App.tsx via a ResizeObserver, so the last
+     message never sits underneath the floating composer. The 220px fallback
+     is enough for the typical composer (toolbar + textarea + dock padding)
+     before the observer has had a chance to run on first paint. */
+  padding: var(--ui-space-5) var(--ui-space-4) var(--ui-composer-reserved, 220px);
 }
 
 .ui-conversation-inner {
@@ -1116,12 +1130,36 @@ select {
   border-color: var(--ui-danger);
 }
 
-/* Tool head: icon + name + badge */
+/* Tool head: icon + name + badge.
+   The same class is used as a static <div> for non-file tools and as a
+   <button> toggle for file tools (read/write/edit) — so reset button
+   defaults to keep the layout identical. */
 .ui-tool-head {
   display: flex;
   align-items: center;
   gap: var(--ui-space-2);
   margin-bottom: 2px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  cursor: default;
+  color: inherit;
+  font: inherit;
+}
+button.ui-tool-head {
+  cursor: pointer;
+  border-radius: var(--ui-radius-sm);
+  transition: background 0.12s ease;
+}
+button.ui-tool-head:hover {
+  background: var(--ui-surface-hover);
+}
+/* When the card is collapsible but still folded, give the header a hint of
+   extra padding so the click target is comfortable. */
+.ui-tool-card.collapsible:not(.open) > .ui-tool-head {
+  padding: 4px 0 6px;
 }
 .ui-tool-icon {
   flex: none;
@@ -1133,6 +1171,28 @@ select {
   font-weight: 600;
   font-size: 12.5px;
   color: var(--ui-text);
+  flex: none;
+}
+/* Inline file path shown in the header for file tools so the user can
+   identify which file they're looking at without expanding the body. */
+.ui-tool-params-inline {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ui-text-faint);
+  font-family: var(--ui-font-mono);
+  font-size: 12px;
+  padding-left: 2px;
+}
+.ui-tool-chevron {
+  flex: none;
+  font-size: 11px;
+  color: var(--ui-text-faint);
+  margin-left: var(--ui-space-1);
+  width: 14px;
+  text-align: center;
 }
 .ui-tool-badge {
   flex: none;
@@ -1589,13 +1649,24 @@ select {
   background: none;
   color: var(--ui-text);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   resize: none;
   max-height: 220px;
-  padding: var(--ui-space-1) var(--ui-space-1);
+  /* Generous horizontal padding gives the input a more breathable feel and
+     a softer "inner frame" — the textarea no longer hugs the card edges.
+     The focus glow (theme-overridden) anchors the eye without a hard border. */
+  padding: var(--ui-space-2) var(--ui-space-3);
+  border-radius: var(--ui-radius-md);
+  /* Subtle sunken surface so the prompt reads as a distinct input region
+     even when the card itself has no border. Themes can override. */
+  background: var(--ui-surface-sunken);
+  transition:
+    background 0.15s ease,
+    box-shadow 0.2s ease;
 }
 .ui-prompt:focus {
   outline: none;
+  background: var(--ui-surface-raised);
 }
 .ui-composer-toolbar {
   display: flex;
@@ -2014,11 +2085,13 @@ select {
    VSCode-style panels — window controls · workspace tree · task · scm · diff
    ========================================================================= */
 
-/* Windows caption controls hug the far-right edge of the window bar. */
+/* Windows caption controls are pinned by the .ui-window-bar flex layout
+   (right padding + flex: none on the container). The bar's own right padding
+   provides the breathing room between the last token and the close button,
+   and the caption container itself sits flush with that inner edge so the
+   three 46px buttons cannot be clipped by the window content. */
 .ui-window-controls.win {
-  gap: 0;
-  margin-right: calc(-1 * var(--ui-space-4));
-  margin-left: var(--ui-space-2);
+  /* Intentionally empty — see base rule above. */
 }
 
 /* ── Generic left side-panel (task / source-control) ─────────────────────── */
