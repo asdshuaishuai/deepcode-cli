@@ -165,17 +165,10 @@ export const ja: Record<MessageKey, string> = {
   "context.compaction": "コンテキスト",
 
   // ── Model modal ───────────────────────────────────────────
-  "model.title": "モデル設定",
-  "model.model": "モデル",
-  "model.custom": "カスタム（OpenAI 互換）…",
-  "model.customName": "カスタムモデル名",
   "model.thinking": "思考",
   "model.thinkingMax": "最大",
   "model.thinkingHigh": "高",
   "model.noThinking": "思考をオフ",
-  "model.baseUrlKey": "Base URL：{url} · API キー：{status}",
-  "model.configured": "設定済み",
-  "model.missing": "未設定",
 
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "リクエストに失敗しました。",
@@ -221,6 +214,12 @@ export const ja: Record<MessageKey, string> = {
   "settings.envLines": "環境変数、1 行に KEY=VALUE を 1 つ",
   "settings.addServer": "+ サーバーを追加",
   "settings.language": "言語",
+  "settings.general": "一般",
+  "settings.theme": "テーマ",
+  "theme.aqua": "Aqua（ネイティブ）",
+  "theme.metro": "Metro（ネイティブ）",
+  "theme.glass": "グラス",
+  "theme.fusion": "Fusion（タイル · グラス）",
   "decision.default": "既定",
   "decision.allow": "許可",
   "decision.ask": "確認",
@@ -285,7 +284,6 @@ export const ja: Record<MessageKey, string> = {
   "command.empty": "一致するコマンドがありません",
   "command.new.label": "新規セッション",
   "command.plan.label": "プランモードを切り替え",
-  "command.model.label": "モデル設定",
   "command.plugins.label": "プラグインセンター",
   "command.settings.label": "設定",
   "command.undo.label": "元に戻す / 復元",

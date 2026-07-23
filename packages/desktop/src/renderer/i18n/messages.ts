@@ -169,18 +169,11 @@ export const en = {
   "plugins.builtin.hint": "Built-in plugins ship with Orca and cannot be uninstalled or disabled.",
   "context.compaction": "Context",
 
-  // ── Model modal ───────────────────────────────────────────
-  "model.title": "Model settings",
-  "model.model": "Model",
-  "model.custom": "Custom (OpenAI-compatible)…",
-  "model.customName": "Custom model name",
+  // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
   "model.thinking": "Thinking",
   "model.thinkingMax": "Max",
   "model.thinkingHigh": "High",
   "model.noThinking": "Disable thinking",
-  "model.baseUrlKey": "Base URL: {url} · API key: {status}",
-  "model.configured": "configured",
-  "model.missing": "missing",
 
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "Request failed.",
@@ -227,6 +220,12 @@ export const en = {
   "settings.envLines": "env, one KEY=VALUE per line",
   "settings.addServer": "+ Add server",
   "settings.language": "Language",
+  "settings.general": "General",
+  "settings.theme": "Theme",
+  "theme.aqua": "Aqua (native)",
+  "theme.metro": "Metro (native)",
+  "theme.glass": "Glass",
+  "theme.fusion": "Fusion (tile · glass)",
   "decision.default": "default",
   "decision.allow": "allow",
   "decision.ask": "ask",
@@ -291,7 +290,6 @@ export const en = {
   "command.empty": "No matching commands",
   "command.new.label": "New session",
   "command.plan.label": "Toggle Plan mode",
-  "command.model.label": "Model settings",
   "command.plugins.label": "Plugin Center",
   "command.settings.label": "Settings",
   "command.undo.label": "Undo / restore",
@@ -582,18 +580,11 @@ export const zh: Record<MessageKey, string> = {
   "plugins.builtin.hint": "内置插件随 Orca 一起发布，不可卸载或禁用。",
   "context.compaction": "上下文",
 
-  // ── Model modal ───────────────────────────────────────────
-  "model.title": "模型设置",
-  "model.model": "模型",
-  "model.custom": "自定义（OpenAI 兼容）…",
-  "model.customName": "自定义模型名称",
+  // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
   "model.thinking": "思考",
   "model.thinkingMax": "最高",
   "model.thinkingHigh": "高",
   "model.noThinking": "关闭思考",
-  "model.baseUrlKey": "Base URL：{url} · API Key：{status}",
-  "model.configured": "已配置",
-  "model.missing": "未配置",
 
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "请求失败。",
@@ -639,6 +630,12 @@ export const zh: Record<MessageKey, string> = {
   "settings.envLines": "环境变量，每行一条 KEY=VALUE",
   "settings.addServer": "+ 添加服务器",
   "settings.language": "语言",
+  "settings.general": "常规",
+  "settings.theme": "主题",
+  "theme.aqua": "Aqua（原生）",
+  "theme.metro": "Metro（原生）",
+  "theme.glass": "毛玻璃",
+  "theme.fusion": "Fusion（磁贴 · 玻璃）",
   "decision.default": "默认",
   "decision.allow": "允许",
   "decision.ask": "询问",
@@ -703,7 +700,6 @@ export const zh: Record<MessageKey, string> = {
   "command.empty": "无匹配命令",
   "command.new.label": "新建会话",
   "command.plan.label": "切换计划模式",
-  "command.model.label": "模型设置",
   "command.plugins.label": "插件中心",
   "command.settings.label": "设置",
   "command.undo.label": "撤销 / 恢复",

@@ -10,6 +10,7 @@ import type {
 import { api } from "../api";
 import { useI18n, type Locale, type MessageKey } from "../i18n";
 import { Button, Checkbox, Field, Input, Select } from "../ui/index";
+import { availableThemes, type Theme } from "../lib/appearance";
 import {
   aggregateByTimeWindow,
   aggregateByWorkspace,
@@ -25,13 +26,19 @@ type Props = {
   sessions: SerializableSessionEntry[];
   onSave: (next: EditableSettings) => void;
   onClose: () => void;
+  /** Platform string (e.g. "win32") — scopes which themes are offered. */
+  platform: string;
+  /** Currently active theme. */
+  theme: Theme;
+  /** Called when the user picks a theme in the General tab. */
+  onSelectTheme: (theme: Theme) => void;
 };
 
 type Tab = "connection" | "language" | "model" | "permissions" | "tokens";
 
 const TABS: { id: Tab; labelKey: MessageKey }[] = [
   { id: "connection", labelKey: "settings.tab.connection" },
-  { id: "language", labelKey: "settings.language" },
+  { id: "language", labelKey: "settings.general" },
   { id: "model", labelKey: "settings.tab.model" },
   { id: "permissions", labelKey: "settings.tab.permissions" },
   { id: "tokens", labelKey: "settings.tab.tokens" },
@@ -65,7 +72,16 @@ const REASONING_OPTIONS: ReasoningEffort[] = ["max", "high"];
 const LOCALE_OPTIONS: Locale[] = ["zh", "zh-TW", "zh-HK", "en", "ja", "ko"];
 
 /** Settings surface rendered inline in the main area (no modal shell). */
-export function SettingsPanel({ initial, initialTab, sessions, onSave, onClose }: Props): JSX.Element {
+export function SettingsPanel({
+  initial,
+  initialTab,
+  sessions,
+  onSave,
+  onClose,
+  platform,
+  theme,
+  onSelectTheme,
+}: Props): JSX.Element {
   const { t, locale, setLocale } = useI18n();
   const [s, setS] = useState<EditableSettings>(initial);
   const isTab = (v: string | undefined): v is Tab => TABS.some((item) => item.id === v);
@@ -195,23 +211,43 @@ export function SettingsPanel({ initial, initialTab, sessions, onSave, onClose }
             ) : null}
 
             {tab === "language" ? (
-              <section className="ui-settings-section">
-                <div className="ui-settings-section-title">{t("settings.language")}</div>
-                <div className="ui-lang-grid" role="radiogroup" aria-label={t("settings.language")}>
-                  {LOCALE_OPTIONS.map((code) => (
-                    <button
-                      key={code}
-                      type="button"
-                      role="radio"
-                      aria-checked={locale === code}
-                      className={`ui-lang-chip${locale === code ? " active" : ""}`}
-                      onClick={() => setLocale(code)}
-                    >
-                      {t(`lang.${code}` as MessageKey)}
-                    </button>
-                  ))}
-                </div>
-              </section>
+              <>
+                <section className="ui-settings-section">
+                  <div className="ui-settings-section-title">{t("settings.language")}</div>
+                  <div className="ui-lang-grid" role="radiogroup" aria-label={t("settings.language")}>
+                    {LOCALE_OPTIONS.map((code) => (
+                      <button
+                        key={code}
+                        type="button"
+                        role="radio"
+                        aria-checked={locale === code}
+                        className={`ui-lang-chip${locale === code ? " active" : ""}`}
+                        onClick={() => setLocale(code)}
+                      >
+                        {t(`lang.${code}` as MessageKey)}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="ui-settings-section">
+                  <div className="ui-settings-section-title">{t("settings.theme")}</div>
+                  <div className="ui-lang-grid" role="radiogroup" aria-label={t("settings.theme")}>
+                    {availableThemes(platform).map((id) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={theme === id}
+                        className={`ui-lang-chip${theme === id ? " active" : ""}`}
+                        onClick={() => onSelectTheme(id)}
+                      >
+                        {t(`theme.${id}` as MessageKey)}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </>
             ) : null}
 
             {tab === "model" ? (

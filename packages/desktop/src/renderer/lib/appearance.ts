@@ -13,9 +13,10 @@ export type ReasoningMode = "normal" | "expanded" | "hidden";
 
 // The visual theme picks the stylesheet that binds the `--ui-*` vocabulary.
 // Aqua ships on macOS, Metro on Windows, Glass (glassmorphism) is the Linux
-// default and an opt-in alternative on macOS. The user's explicit choice is
-// persisted and wins over the platform default.
-export type Theme = "aqua" | "metro" | "glass";
+// default and an opt-in alternative on macOS. Fusion is a Windows-only theme
+// blending Win8 tile colors with Win11 glassy breath. The user's explicit
+// choice is persisted and wins over the platform default.
+export type Theme = "aqua" | "metro" | "glass" | "fusion";
 
 const APPEARANCE_KEY = "deepcode.appearance";
 const REASONING_KEY = "deepcode.reasoningMode";
@@ -28,6 +29,7 @@ const THEME_STYLESHEETS: Record<Theme, string> = {
   aqua: "./styles.css",
   metro: "./styles-metro.css",
   glass: "./styles-glass.css",
+  fusion: "./styles-fusion.css",
 };
 
 /** The stylesheet href that binds `--ui-*` tokens for a theme. */
@@ -47,10 +49,21 @@ export function baseTheme(platform: string): Theme {
   return platform === "win32" ? "metro" : "aqua";
 }
 
+/**
+ * The themes offered to a platform in the settings panel. Themes are
+ * platform-scoped — Windows exposes Metro + Fusion, macOS exposes Aqua + Glass,
+ * Linux only Glass. Defaults are NOT changed by this map.
+ */
+export function availableThemes(platform: string): Theme[] {
+  if (platform === "win32") return ["metro", "fusion"];
+  if (platform === "darwin") return ["aqua", "glass"];
+  return ["glass"];
+}
+
 export function getStoredTheme(): Theme | null {
   try {
     const stored = localStorage.getItem(THEME_KEY);
-    return stored === "aqua" || stored === "metro" || stored === "glass" ? stored : null;
+    return stored === "aqua" || stored === "metro" || stored === "glass" || stored === "fusion" ? stored : null;
   } catch {
     return null;
   }

@@ -130,6 +130,10 @@ async function copyStaticAssets() {
   if (existsSync(glassCss)) {
     await cp(glassCss, resolve(outdir, "renderer/styles-glass.css"));
   }
+  const fusionCss = resolve(__dirname, "src/renderer/styles-fusion.css");
+  if (existsSync(fusionCss)) {
+    await cp(fusionCss, resolve(outdir, "renderer/styles-fusion.css"));
+  }
 }
 
 async function run() {

@@ -13,7 +13,7 @@ type Props = {
   branches: string[];
   onSwitchBranch: (branch: string) => void;
   onSetModel: (selection: ModelConfigSelection) => void;
-  onOpenModel: () => void;
+  onOpenModel?: () => void;
   onOpenSettings: () => void;
   onOpenTokens: () => void;
   activeTokens: number;
@@ -74,7 +74,6 @@ export function TopBar({
   branches,
   onSwitchBranch,
   onSetModel,
-  onOpenModel,
   onOpenSettings,
   onOpenTokens,
   activeTokens,
@@ -138,7 +137,11 @@ export function TopBar({
   );
 
   const modelKnown = settings ? MODELS.includes(settings.model) : true;
-  const modelSelectValue = settings ? (modelKnown ? settings.model : "__custom__") : MODELS[0]!;
+  // Fallback for safety: if the persisted model isn't one of the two
+  // supported DeepSeek variants, surface the first known option so the
+  // <select> always has a valid current value. The user can pick the
+  // intended one without the model list going blank.
+  const modelSelectValue = modelKnown && settings ? settings.model : MODELS[0]!;
 
   return (
     <div className="ui-window-bar">
@@ -175,9 +178,9 @@ export function TopBar({
       <div className="ui-window-bar-spacer" />
 
       {/* Dual model selectors: model + thinking model, paired inside one
-         pill. A thin vertical divider separates the two sub-controls so
-         they still feel like distinct inputs without breaking out of the
-         shared accent shell. */}
+         pill. The project ships against DeepSeek's official API only,
+         so the model dropdown is the fixed pair of deepseek-v4-pro /
+         deepseek-v4-flash — no custom / OpenAI-compatible option. */}
       {settings ? (
         <div className="ui-topbar-pill ui-topbar-models">
           <Select
@@ -185,13 +188,8 @@ export function TopBar({
             value={modelSelectValue}
             title={t("topbar.model")}
             onChange={(e) => {
-              const v = e.target.value;
-              if (v === "__custom__") {
-                onOpenModel();
-                return;
-              }
               onSetModel({
-                model: v,
+                model: e.target.value,
                 thinkingEnabled: settings.thinkingEnabled,
                 reasoningEffort: settings.reasoningEffort,
               });
@@ -202,8 +200,6 @@ export function TopBar({
                 {m}
               </option>
             ))}
-            {!modelKnown ? <option value={settings.model}>{settings.model}</option> : null}
-            <option value="__custom__">{t("model.custom")}</option>
           </Select>
           <span className="ui-topbar-divider" aria-hidden="true" />
           <Select

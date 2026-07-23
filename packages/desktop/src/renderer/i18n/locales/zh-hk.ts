@@ -166,17 +166,10 @@ export const zhHK: Record<MessageKey, string> = {
   "context.compaction": "上下文",
 
   // ── Model modal ───────────────────────────────────────────
-  "model.title": "模型設定",
-  "model.model": "模型",
-  "model.custom": "自訂（OpenAI 相容）…",
-  "model.customName": "自訂模型名稱",
   "model.thinking": "思考",
   "model.thinkingMax": "最高",
   "model.thinkingHigh": "高",
   "model.noThinking": "關閉思考",
-  "model.baseUrlKey": "Base URL：{url} · API Key：{status}",
-  "model.configured": "已設定",
-  "model.missing": "未設定",
 
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "請求失敗。",
@@ -222,6 +215,12 @@ export const zhHK: Record<MessageKey, string> = {
   "settings.envLines": "環境變數，每行一條 KEY=VALUE",
   "settings.addServer": "+ 新增伺服器",
   "settings.language": "語言",
+  "settings.general": "一般",
+  "settings.theme": "主題",
+  "theme.aqua": "Aqua（原生）",
+  "theme.metro": "Metro（原生）",
+  "theme.glass": "毛玻璃",
+  "theme.fusion": "Fusion（磁磚 · 玻璃）",
   "decision.default": "預設",
   "decision.allow": "允許",
   "decision.ask": "詢問",
@@ -286,7 +285,6 @@ export const zhHK: Record<MessageKey, string> = {
   "command.empty": "無相符命令",
   "command.new.label": "新增工作階段",
   "command.plan.label": "切換計劃模式",
-  "command.model.label": "模型設定",
   "command.plugins.label": "外掛中心",
   "command.settings.label": "設定",
   "command.undo.label": "復原 / 還原",

@@ -1,0 +1,515 @@
+/* ===========================================================================
+   Fusion theme — Win8 磁贴多彩 × Win11 玻璃呼吸色 × 磁铁按钮质感.
+
+   与 metro/glass/aqua 一样,本文件不含布局规则(全部由 ui.css 通过 --ui-* 语义
+   变量负责)。这里只:
+     (1) 将 --ui-* 绑定到 Fusion 调色板(默认深色 + 浅色变体),玻璃用半透明,
+     (2) 玻璃呼吸色:卡片背景色在蓝→青→紫间 8s 流转,错峰呼吸,
+     (3) 多彩磁贴点缀:状态徽章/工具标签用饱和纯色 + 顶部受光高光,
+     (4) 磁铁按钮:三态物理模拟(渐变凸面/悬停浮起/按下沉陷).
+
+   严格遵守铁律:本文件是新增项,不改动 metro/glass/aqua 任何一个字节。
+   =========================================================================== */
+
+:root {
+  /* ── Fusion 调色板(融合混搭 C 方案)── */
+  --fusion-bg: #161618; /* 基底,比 metro #1d1d1d 更深,让玻璃更通透 */
+  --fusion-primary: #1f6fc7; /* 主蓝(Win8 沉稳蓝,白字可读) */
+  --fusion-info: #0099bc; /* 青 */
+  --fusion-accent: #7b61ff; /* 紫(Win11 Fluent 标志色) */
+  --fusion-success: #3e8e3e; /* 绿 */
+  --fusion-warning: #f0a30a; /* 橙 */
+  --fusion-danger: #e81123; /* 红 */
+  --fusion-magenta: #e3008c; /* 品红(tokens 徽章) */
+  /* 玻璃材质:半透明底 + 高饱和模糊。透在页面多色径向背景上才"看得见"。 */
+  --fusion-glass: rgba(43, 45, 52, 0.45);
+  --fusion-glass-raised: rgba(255, 255, 255, 0.08);
+  --fusion-glass-border: rgba(255, 255, 255, 0.14);
+  --fusion-glass-highlight: rgba(255, 255, 255, 0.16); /* 玻璃顶部受光高光 */
+  --fusion-acrylic: rgba(22, 22, 24, 0.72);
+  --fusion-sans:
+    "Segoe UI", "Segoe UI Variable", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Microsoft YaHei", Helvetica,
+    Arial, sans-serif;
+  --fusion-mono: Consolas, "Cascadia Code", "SF Mono", Menlo, monospace;
+
+  /* ── 语义 token 绑定(默认深色)── */
+  --ui-bg: var(--fusion-bg);
+  --ui-surface: var(--fusion-glass);
+  --ui-surface-raised: var(--fusion-glass-raised);
+  --ui-surface-sunken: rgba(0, 0, 0, 0.25);
+  --ui-surface-hover: rgba(255, 255, 255, 0.06);
+
+  --ui-text: #ffffff;
+  --ui-text-dim: #c7c7c7;
+  --ui-text-faint: #8a8a8a;
+  --ui-text-on-accent: #ffffff;
+
+  --ui-accent: var(--fusion-primary);
+  --ui-accent-strong: #17568f;
+  --ui-accent-soft: rgba(31, 111, 199, 0.24);
+  --ui-accent-fill: var(--fusion-primary);
+  --ui-focus-ring: var(--fusion-primary);
+
+  --ui-border: var(--fusion-glass-border);
+  --ui-border-soft: rgba(255, 255, 255, 0.08);
+
+  --ui-success: var(--fusion-success);
+  --ui-danger: var(--fusion-danger);
+  --ui-warning: var(--fusion-warning);
+  --ui-info: var(--fusion-info);
+
+  --ui-radius-sm: 4px;
+  --ui-radius-md: 6px;
+  --ui-radius-lg: 10px;
+  --ui-radius-pill: 999px;
+
+  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ui-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --ui-shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  --ui-font-sans: var(--fusion-sans);
+  --ui-font-mono: var(--fusion-mono);
+}
+
+/* ── 页面底层多色径向背景 — 让玻璃质感可见 ──────────────────────────────
+   这是"玻璃呼吸色"能被看见的前提:中性灰上看不出玻璃,需要彩色光晕透出。 */
+body {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(0, 153, 188, 0.1), transparent 40%),
+    radial-gradient(circle at 85% 75%, rgba(123, 97, 255, 0.1), transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(227, 0, 140, 0.06), transparent 50%),
+    var(--fusion-bg);
+  background-attachment: fixed;
+}
+
+/* ── Fusion — Light variant ────────────────────────────────────────────────
+   浅色下玻璃改为白色半透明;accent 多彩色保持不变,多彩感在浅色也要体现。 */
+:root[data-appearance="light"] {
+  --fusion-bg: #f3f3f3;
+  --fusion-acrylic: rgba(243, 243, 243, 0.78);
+  --fusion-glass: rgba(255, 255, 255, 0.6);
+  --fusion-glass-raised: rgba(0, 0, 0, 0.04);
+  --fusion-glass-border: rgba(0, 0, 0, 0.12);
+  --fusion-glass-highlight: rgba(255, 255, 255, 0.7);
+
+  --ui-surface-sunken: rgba(0, 0, 0, 0.06);
+  --ui-surface-hover: rgba(0, 0, 0, 0.05);
+
+  --ui-text: #1b1b1b;
+  --ui-text-dim: #444444;
+  --ui-text-faint: #767676;
+
+  --ui-border: rgba(0, 0, 0, 0.14);
+  --ui-border-soft: rgba(0, 0, 0, 0.08);
+
+  --ui-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --ui-shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+/* ===========================================================================
+   玻璃呼吸色 — 核心特征
+
+   卡片玻璃在 蓝→青→紫 间 8s 流转,不同元素错峰 delay,此起彼伏。
+   外发光(辉光)同步呼吸——色浓时增强。这是 Win11 Mica "材质会响应"的感觉。
+   全部包裹在 prefers-reduced-motion: no-preference 内,尊重无障碍。
+   =========================================================================== */
+@keyframes fusion-glass-hue {
+  0% {
+    background-color: rgba(31, 111, 199, 0.1);
+  }
+  33% {
+    background-color: rgba(0, 153, 188, 0.12);
+  }
+  66% {
+    background-color: rgba(123, 97, 255, 0.11);
+  }
+  100% {
+    background-color: rgba(31, 111, 199, 0.1);
+  }
+}
+@keyframes fusion-glass-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 var(--fusion-glass-highlight),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+      0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+      0 0 28px 2px rgba(0, 188, 242, 0.18);
+  }
+}
+/* 磁贴点缀的亮度脉动 */
+@keyframes fusion-accent-shimmer {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.15) saturate(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* TopBar — 玻璃 + 辉光呼吸 */
+  .ui-window-bar {
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    border-color: var(--fusion-glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--fusion-glass-highlight),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    animation:
+      fusion-glass-hue 8s ease-in-out infinite,
+      fusion-glass-glow 8s ease-in-out infinite;
+  }
+
+  /* 侧栏 rail — 玻璃,错峰 -2s */
+  .ui-rail {
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    background: var(--fusion-glass);
+    border-color: var(--fusion-glass-border);
+    animation:
+      fusion-glass-hue 8s ease-in-out -2s infinite,
+      fusion-glass-glow 8s ease-in-out -2s infinite;
+  }
+
+  /* 输入框 / prompt — 玻璃呼吸辉光 */
+  .ui-prompt,
+  .ui-composer {
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    background: var(--fusion-glass);
+    border-color: var(--fusion-glass-border);
+    animation:
+      fusion-glass-hue 8s ease-in-out infinite,
+      fusion-glass-glow 8s ease-in-out infinite;
+  }
+}
+
+/* reduced-motion 时仍保留玻璃材质(静态),只是不流转。 */
+.ui-window-bar,
+.ui-rail,
+.ui-prompt,
+.ui-composer {
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+}
+
+/* ===========================================================================
+   玻璃卡片 — 消息气泡 / 工具卡 / 模态
+
+   半透明 + 边缘高光 + 底部内阴影,透出底层多色径向背景 = 玻璃质感。
+   =========================================================================== */
+.ui-bubble.assistant,
+.ui-bubble.thinking,
+.ui-tool-card,
+.ui-system-note {
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  background: var(--fusion-glass);
+  border: 1px solid var(--fusion-glass-border);
+  border-radius: var(--ui-radius-lg);
+  box-shadow:
+    inset 0 1px 0 var(--fusion-glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    var(--ui-shadow-card);
+}
+.ui-bubble.assistant {
+  border-bottom-left-radius: var(--ui-radius-sm);
+}
+
+/* 用户消息 — 多彩磁贴(主蓝),带受光高光 + 外投影 */
+.ui-bubble.user {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.04) 48%,
+      rgba(0, 0, 0, 0.16) 100%
+    ),
+    var(--fusion-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--ui-radius-lg);
+  border-bottom-right-radius: var(--ui-radius-sm);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25),
+    0 4px 14px rgba(31, 111, 199, 0.35);
+}
+
+/* 工具卡左缘彩色条 — 多彩点缀(按工具类型分色) */
+.ui-tool-card.read {
+  border-left: 3px solid var(--fusion-success);
+}
+.ui-tool-card.write,
+.ui-tool-card.edit {
+  border-left: 3px solid var(--fusion-warning);
+}
+.ui-tool-card.bash {
+  border-left: 3px solid var(--fusion-primary);
+}
+.ui-tool-card.mcp {
+  border-left: 3px solid var(--fusion-accent);
+}
+.ui-tool-card.err {
+  border-left: 3px solid var(--fusion-danger);
+}
+
+.ui-diff,
+.ui-tool-plan {
+  border-color: var(--fusion-glass-border);
+  border-radius: var(--ui-radius-md);
+}
+.ui-tool-plan-label {
+  background: rgba(0, 0, 0, 0.25);
+}
+.ui-md pre {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: var(--fusion-glass-border);
+  border-radius: var(--ui-radius-md);
+}
+.ui-md code {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--ui-radius-sm);
+}
+
+/* ===========================================================================
+   多彩磁贴点缀 — 状态徽章 / 工具名
+
+   用饱和纯色 + inset 顶部受光高光 + 外投影,打破单一蓝调。
+   针对实际存在的元素:TopBar 的模型/思考徽章、token 徽章、工具卡里的工具名。
+   =========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  .ui-topbar-thinking,
+  .ui-topbar-tokens,
+  .ui-tool-name {
+    animation: fusion-accent-shimmer 4s ease-in-out infinite;
+  }
+}
+/* 思考模式徽章 — 紫色磁贴(Win11 Fluent 标志色) */
+.ui-topbar-thinking {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)),
+    var(--fusion-accent);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+/* token 徽章 — 青色磁贴 */
+.ui-topbar-tokens {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)),
+    var(--fusion-info);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+/* 模型徽章 — 主蓝磁贴 */
+.ui-topbar-model {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)),
+    var(--fusion-primary);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+/* 工具卡里的工具名 — 玻璃磁贴底 + 顶部受光高光 */
+.ui-tool-name {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ===========================================================================
+   磁铁按钮 — 三态物理模拟
+
+   默认:受光凸面 + 顶光 + 厚度暗角 + 外影(悬浮离地)
+   悬停:translateY(-1px) 浮起 + 辉光增强(像被磁力吸引上来)
+   按下:translateY(1px) 下沉 + 顶部内凹(像被吸附按下去)
+   过渡用 cubic-bezier(.2,.8,.2,1),回弹干脆有物理感。
+   通过覆盖现有 .ui-btn* 选择器实现,不改组件 props、不加新类到 JSX。
+   =========================================================================== */
+.ui-btn {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.02) 48%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+    0 3px 8px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.12s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.15),
+      0 6px 16px rgba(0, 0, 0, 0.45);
+  }
+  .ui-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    filter: brightness(0.92);
+    box-shadow:
+      inset 0 2px 5px rgba(0, 0, 0, 0.45),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
+/* 主按钮 — 多彩磁贴(主蓝)凸面,受光更强 */
+.ui-btn--primary {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.04) 48%,
+    rgba(0, 0, 0, 0.16) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25),
+    0 3px 8px rgba(0, 0, 0, 0.45);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-btn--primary:hover:not(:disabled) {
+    filter: brightness(1.1) saturate(1.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+      0 6px 16px rgba(0, 0, 0, 0.5),
+      0 0 18px rgba(31, 111, 199, 0.35);
+  }
+  .ui-btn--primary:active:not(:disabled) {
+    filter: brightness(0.92);
+    box-shadow:
+      inset 0 2px 5px rgba(0, 0, 0, 0.45),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
+/* 图标按钮(rail) — 方块磁贴,激活态用彩色 */
+.ui-rail-btn,
+.ui-icon-btn {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+  transition:
+    transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.12s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-rail-btn:hover:not(:disabled),
+  .ui-icon-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+  }
+  .ui-rail-btn:active:not(:disabled),
+  .ui-icon-btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+}
+/* rail 激活态 — 紫色磁贴(Win11 Fluent 标志色点亮) */
+.ui-rail-btn--active {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.05)),
+    var(--fusion-accent);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 12px rgba(123, 97, 255, 0.4);
+}
+
+/* ===========================================================================
+   Fluent 亚克力 — 模态框与命令面板的半透明模糊(Mica 感)
+   =========================================================================== */
+.ui-modal-overlay,
+.ui-command-overlay {
+  backdrop-filter: blur(6px);
+}
+.ui-modal,
+.ui-command {
+  background: var(--fusion-acrylic);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--fusion-glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--fusion-glass-highlight),
+    var(--ui-shadow-modal);
+}
+
+/* ===========================================================================
+   Windows caption controls — 扁平磁贴 hover(蓝/红)
+   =========================================================================== */
+.ui-window-controls.win {
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.ui-win-ctrl {
+  border-radius: 0;
+  color: var(--ui-text-faint);
+}
+.ui-win-ctrl:hover {
+  background: var(--fusion-primary);
+  color: #fff;
+}
+.ui-win-ctrl.close:hover,
+.ui-win-ctrl.close:active {
+  background: var(--fusion-danger);
+}
+
+/* Process output panel — 玻璃凹陷 */
+.ui-process-panel {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(20px);
+  border-color: var(--fusion-glass-border);
+}
+.ui-process-panel-head {
+  background: var(--fusion-glass);
+  border-color: var(--fusion-glass-border);
+}
+.ui-process-btn:hover {
+  background: var(--fusion-primary);
+  color: #fff;
+}
+.ui-process-btn-close:hover {
+  background: var(--fusion-danger);
+}
+
+/* 输入框聚焦 — 柔和彩色辉光环(不刺眼) */
+.ui-prompt:focus {
+  border-color: rgba(0, 188, 242, 0.5);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-prompt:focus {
+    box-shadow: 0 0 0 3px rgba(31, 111, 199, 0.18);
+  }
+}
+
+/* 侧栏(explorer/scm 等面板容器)— 玻璃 */
+.ui-side-panel,
+.ui-panel {
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  background: var(--fusion-glass);
+  border-color: var(--fusion-glass-border);
+}

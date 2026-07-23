@@ -19,7 +19,6 @@ import { Composer } from "./components/Composer";
 import { PermissionCard } from "./components/PermissionCard";
 import { QuestionCard } from "./components/QuestionCard";
 import { PlanCard } from "./components/PlanCard";
-import { ModelModal } from "./components/ModelModal";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { TaskPanel } from "./components/TaskPanel";
 import { SourceControlPanel } from "./components/SourceControlPanel";
@@ -116,7 +115,7 @@ export function App(): JSX.Element {
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
   const [dismissedQuestionIds, setDismissedQuestionIds] = useState<Set<string>>(() => new Set());
 
-  const [modal, setModal] = useState<"model" | "undo" | null>(null);
+  const [modal, setModal] = useState<"undo" | null>(null);
   const [editable, setEditable] = useState<EditableSettings | null>(null);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string | undefined>(undefined);
 
@@ -468,7 +467,6 @@ export function App(): JSX.Element {
 
   const handleSetModel = useCallback(async (selection: ModelConfigSelection) => {
     setSettings(await api.setModel(selection));
-    setModal(null);
     const id = activeIdRef.current;
     if (id) {
       setMessages(await api.listMessages(id));
@@ -496,6 +494,13 @@ export function App(): JSX.Element {
       return next;
     });
   }, [platform]);
+
+  // Theme selection from the settings panel (General tab). Applies immediately
+  // (swaps the stylesheet link) and persists — no reload needed.
+  const handleSelectTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    persistTheme(next);
+  }, []);
 
   const handleCycleReasoning = useCallback(() => {
     setReasoningModeState((prev) => {
@@ -603,7 +608,6 @@ export function App(): JSX.Element {
     () => [
       { id: "new", label: t("command.new.label"), keywords: "new session", run: handleNewSession },
       { id: "plan", label: t("command.plan.label"), keywords: "plan", run: () => setPlanMode((v) => !v) },
-      { id: "model", label: t("command.model.label"), keywords: "model", run: () => setModal("model") },
       {
         id: "plugins",
         label: t("command.plugins.label"),
@@ -869,7 +873,6 @@ export function App(): JSX.Element {
         branches={branches}
         onSwitchBranch={(b) => void handleSwitchBranch(b)}
         onSetModel={(sel) => void handleSetModel(sel)}
-        onOpenModel={() => setModal("model")}
         onOpenSettings={() => void handleOpenSettings()}
         onOpenTokens={openTokensView}
         activeTokens={activeContextTokens}
@@ -884,6 +887,9 @@ export function App(): JSX.Element {
             sessions={sessions}
             onSave={(next) => void handleSaveSettings(next)}
             onClose={() => setMainView("chat")}
+            platform={platform}
+            theme={theme}
+            onSelectTheme={handleSelectTheme}
           />
         ) : mainView === "plugins" ? (
           <PluginDetail
@@ -946,8 +952,6 @@ export function App(): JSX.Element {
                     handleNewSession();
                   } else if (cmd === "plan") {
                     setPlanMode((v) => !v);
-                  } else if (cmd === "model") {
-                    setModal("model");
                   } else if (cmd === "mcp" || cmd === "plugins") {
                     selectView("plugins");
                   } else if (cmd === "skills") {
@@ -977,9 +981,6 @@ export function App(): JSX.Element {
 
       {diffTarget ? <DiffOverlay target={diffTarget} onClose={() => setDiffTarget(null)} /> : null}
 
-      {modal === "model" && settings ? (
-        <ModelModal settings={settings} onApply={(sel) => void handleSetModel(sel)} onClose={() => setModal(null)} />
-      ) : null}
       {modal === "undo" ? (
         <UndoModal sessionId={activeId} onClose={() => setModal(null)} onRestored={() => void handleUndoRestored()} />
       ) : null}

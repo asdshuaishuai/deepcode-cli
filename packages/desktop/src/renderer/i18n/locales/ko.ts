@@ -165,17 +165,10 @@ export const ko: Record<MessageKey, string> = {
   "context.compaction": "컨텍스트",
 
   // ── Model modal ───────────────────────────────────────────
-  "model.title": "모델 설정",
-  "model.model": "모델",
-  "model.custom": "사용자 지정(OpenAI 호환)…",
-  "model.customName": "사용자 지정 모델 이름",
   "model.thinking": "사고",
   "model.thinkingMax": "최대",
   "model.thinkingHigh": "높음",
   "model.noThinking": "사고 끄기",
-  "model.baseUrlKey": "Base URL: {url} · API 키: {status}",
-  "model.configured": "구성됨",
-  "model.missing": "미설정",
 
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "요청에 실패했습니다.",
@@ -221,6 +214,12 @@ export const ko: Record<MessageKey, string> = {
   "settings.envLines": "환경 변수, 한 줄에 KEY=VALUE 하나",
   "settings.addServer": "+ 서버 추가",
   "settings.language": "언어",
+  "settings.general": "일반",
+  "settings.theme": "테마",
+  "theme.aqua": "Aqua(기본)",
+  "theme.metro": "Metro(기본)",
+  "theme.glass": "글래스",
+  "theme.fusion": "Fusion(타일 · 글래스)",
   "decision.default": "기본",
   "decision.allow": "허용",
   "decision.ask": "확인",
@@ -285,7 +284,6 @@ export const ko: Record<MessageKey, string> = {
   "command.empty": "일치하는 명령이 없습니다",
   "command.new.label": "새 세션",
   "command.plan.label": "계획 모드 전환",
-  "command.model.label": "모델 설정",
   "command.plugins.label": "플러그인 센터",
   "command.settings.label": "설정",
   "command.undo.label": "실행 취소 / 복원",
