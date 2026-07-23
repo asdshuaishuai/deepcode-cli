@@ -132,10 +132,10 @@ export class PluginManager {
   }
 
   /** Read a skill's raw SKILL.md markdown by its display path (for the plugin detail pane). */
-  readSkillDoc(path: string): string {
+  readSkillDoc(path: string, locale?: string): string {
     const sm = this.getSessionManager();
     if (!sm) return "";
-    return sm.readSkillDocument(path);
+    return sm.readSkillDocument(path, locale);
   }
 
   /** Search skills by keyword (name or description, case-insensitive).

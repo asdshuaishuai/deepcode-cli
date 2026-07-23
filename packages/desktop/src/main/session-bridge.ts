@@ -718,7 +718,7 @@ export class SessionBridge {
   }
 
   /** Read a built-in plugin's PLUGIN.md instruction document by name. */
-  pluginBuiltinReadDoc(name: string): string {
-    return this.manager.readBuiltinPluginDoc(name);
+  pluginBuiltinReadDoc(name: string, locale?: string): string {
+    return this.manager.readBuiltinPluginDoc(name, locale);
   }
 }

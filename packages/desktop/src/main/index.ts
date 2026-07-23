@@ -219,7 +219,9 @@ function registerIpc(): void {
     getPluginManager().searchSkills(query, sessionId)
   );
   handle(IpcRequest.PluginRefreshSkills, (sessionId?: string) => getPluginManager().refreshSkills(sessionId));
-  handle(IpcRequest.PluginReadSkillDoc, (path: string) => getPluginManager().readSkillDoc(path));
+  handle(IpcRequest.PluginReadSkillDoc, (path: string, locale?: string) =>
+    getPluginManager().readSkillDoc(path, locale)
+  );
   handle(
     IpcRequest.PluginUpsertMcpServer,
     (name: string, command: string, args?: string[], env?: Record<string, string>) =>
@@ -227,7 +229,9 @@ function registerIpc(): void {
   );
   handle(IpcRequest.PluginRemoveMcpServer, (name: string) => getBridge().pluginRemoveMcpServer(name));
   handle(IpcRequest.PluginBuiltinList, () => getBridge().pluginBuiltinList());
-  handle(IpcRequest.PluginBuiltinReadDoc, (name: string) => getBridge().pluginBuiltinReadDoc(name));
+  handle(IpcRequest.PluginBuiltinReadDoc, (name: string, locale?: string) =>
+    getBridge().pluginBuiltinReadDoc(name, locale)
+  );
 
   // ── File scanner (for @file mentions) ────────────────────────────────────
   handle(IpcRequest.ScanFiles, (query: string) => {

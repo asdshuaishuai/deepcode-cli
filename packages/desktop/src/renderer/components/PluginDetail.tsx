@@ -94,7 +94,7 @@ function stripFrontmatter(md: string): string {
  * The left list carries only summary info; this pane carries the full picture.
  */
 export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill }: Props): JSX.Element {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [servers, setServers] = useState<PluginMcpServer[]>([]);
   const [doc, setDoc] = useState<string>("");
   const [docError, setDocError] = useState(false);
@@ -121,7 +121,7 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill 
     setDoc("");
     setDocError(false);
     api
-      .pluginReadSkillDoc(skill.path)
+      .pluginReadSkillDoc(skill.path, locale)
       .then((md) => {
         if (!cancelled) setDoc(md);
       })
@@ -131,7 +131,7 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill 
     return () => {
       cancelled = true;
     };
-  }, [skill]);
+  }, [skill, locale]);
 
   if (!selection) {
     return (
@@ -342,7 +342,7 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill 
 
 /** Detail pane for a built-in plugin (non-removable). */
 function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [info, setInfo] = useState<BuiltinPluginInfo | null>(null);
   const [doc, setDoc] = useState("");
 
@@ -351,13 +351,13 @@ function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
     void api.pluginBuiltinList().then((list) => {
       if (!cancelled) setInfo(list.find((p) => p.name === name) ?? null);
     });
-    void api.pluginBuiltinReadDoc(name).then((md) => {
+    void api.pluginBuiltinReadDoc(name, locale).then((md) => {
       if (!cancelled) setDoc(md);
     });
     return () => {
       cancelled = true;
     };
-  }, [name]);
+  }, [name, locale]);
 
   const displayName = builtinLabel(t, name, "name", name);
   const displayDesc = builtinLabel(t, name, "desc", info?.description ?? "");

@@ -117,6 +117,17 @@ export function getProjectCode(projectRoot: string): string {
   return `${prefix}-${hash}`;
 }
 
+/**
+ * Whether a UI locale string denotes a Chinese variant. Used by document readers
+ * to prefer a sibling `.zh.md` localized doc when present. Kept in core (not the
+ * desktop layer) so the locale decision is centralized and UI-agnostic.
+ */
+export function isChineseLocale(locale?: string): boolean {
+  if (!locale) return false;
+  const lower = locale.toLowerCase();
+  return lower === "zh" || lower.startsWith("zh-");
+}
+
 function getLegacyProjectCode(projectRoot: string): string {
   return projectRoot.replace(/[\\/]/g, "-").replace(/:/g, "");
 }
@@ -957,9 +968,20 @@ ${agentInstructions}
    * value surfaced on SkillInfo. The desktop plugin center renders this document.
    * Resolution reuses resolveSkillPath so bundled/home/project display paths all
    * map back to a real file (with the bundled-traversal guard preserved).
+   *
+   * When `locale` is a Chinese variant (zh / zh-TW / zh-HK / zh-CN), a sibling
+   * `SKILL.zh.md` is preferred if present, falling back to the original file.
+   * Prompt injection should NOT pass a locale (it always uses the canonical doc).
    */
-  readSkillDocument(skillPath: string): string {
-    return fs.readFileSync(this.resolveSkillPath(skillPath), "utf8");
+  readSkillDocument(skillPath: string, locale?: string): string {
+    const basePath = this.resolveSkillPath(skillPath);
+    if (isChineseLocale(locale)) {
+      const zhPath = basePath.replace(/\.md$/i, ".zh.md");
+      if (fs.existsSync(zhPath)) {
+        return fs.readFileSync(zhPath, "utf8");
+      }
+    }
+    return fs.readFileSync(basePath, "utf8");
   }
 
   // ── Orca Built-in Plugins ────────────────────────────────────────────────────
@@ -1024,8 +1046,12 @@ ${agentInstructions}
   /**
    * Read the PLUGIN.md instruction document for a built-in plugin by its name.
    * Used by the desktop plugin detail pane and by prompt injection.
+   *
+   * When `locale` is a Chinese variant (zh / zh-TW / zh-HK / zh-CN), a sibling
+   * `PLUGIN.zh.md` is preferred if present, falling back to the original file.
+   * Prompt injection should NOT pass a locale (it always uses the canonical doc).
    */
-  readBuiltinPluginDoc(pluginName: string): string {
+  readBuiltinPluginDoc(pluginName: string, locale?: string): string {
     const root = this.getBuiltinPluginsRoot();
     const docPath = path.join(root, pluginName, "PLUGIN.md");
     const resolvedPath = path.resolve(docPath);
@@ -1034,11 +1060,21 @@ ${agentInstructions}
     if (!resolvedPath.startsWith(`${resolvedRoot}${path.sep}`)) {
       return "";
     }
-    try {
-      return fs.readFileSync(resolvedPath, "utf8");
-    } catch {
-      return "";
+    const tryRead = (p: string): string | null => {
+      try {
+        return fs.readFileSync(p, "utf8");
+      } catch {
+        return null;
+      }
+    };
+    if (isChineseLocale(locale)) {
+      const zhPath = resolvedPath.replace(/\.md$/i, ".zh.md");
+      const zh = tryRead(zhPath);
+      if (zh !== null) {
+        return zh;
+      }
     }
+    return tryRead(resolvedPath) ?? "";
   }
 
   private resolveSkillPath(skillPath: string): string {

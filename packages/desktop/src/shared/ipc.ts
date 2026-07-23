@@ -303,7 +303,7 @@ export type DesktopApi = {
   /** Force-refresh skills from disk. */
   pluginRefreshSkills(sessionId?: string): Promise<SkillInfo[]>;
   /** Read a skill's raw SKILL.md markdown by its display path. */
-  pluginReadSkillDoc(path: string): Promise<string>;
+  pluginReadSkillDoc(path: string, locale?: string): Promise<string>;
   /** Add or update an MCP server config (instant reconnect). */
   pluginUpsertMcpServer(name: string, command: string, args?: string[], env?: Record<string, string>): Promise<void>;
   /** Remove an MCP server. */
@@ -311,7 +311,7 @@ export type DesktopApi = {
   /** List all built-in plugins (non-removable). */
   pluginBuiltinList(): Promise<BuiltinPluginInfo[]>;
   /** Read a built-in plugin's PLUGIN.md document by name. */
-  pluginBuiltinReadDoc(name: string): Promise<string>;
+  pluginBuiltinReadDoc(name: string, locale?: string): Promise<string>;
 
   // ── Events ────────────────────────────────────────────────────────────────
   onAssistantMessage(cb: (message: SessionMessage) => void): () => void;

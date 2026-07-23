@@ -52,12 +52,12 @@ const api: DesktopApi = {
   // ── Plugin API ────────────────────────────────────────────────────────────
   pluginSearchSkills: (query, sessionId) => ipcRenderer.invoke(IpcRequest.PluginSearchSkills, query, sessionId),
   pluginRefreshSkills: (sessionId) => ipcRenderer.invoke(IpcRequest.PluginRefreshSkills, sessionId),
-  pluginReadSkillDoc: (path) => ipcRenderer.invoke(IpcRequest.PluginReadSkillDoc, path),
+  pluginReadSkillDoc: (path, locale) => ipcRenderer.invoke(IpcRequest.PluginReadSkillDoc, path, locale),
   pluginUpsertMcpServer: (name, command, args, env) =>
     ipcRenderer.invoke(IpcRequest.PluginUpsertMcpServer, name, command, args, env),
   pluginRemoveMcpServer: (name) => ipcRenderer.invoke(IpcRequest.PluginRemoveMcpServer, name),
   pluginBuiltinList: () => ipcRenderer.invoke(IpcRequest.PluginBuiltinList),
-  pluginBuiltinReadDoc: (name) => ipcRenderer.invoke(IpcRequest.PluginBuiltinReadDoc, name),
+  pluginBuiltinReadDoc: (name, locale) => ipcRenderer.invoke(IpcRequest.PluginBuiltinReadDoc, name, locale),
 
   // ── Events ────────────────────────────────────────────────────────────────
   onMcpStatusChanged: (cb) => subscribe(IpcEvent.McpStatusChanged, cb as (p: never) => void),
