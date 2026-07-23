@@ -26,6 +26,7 @@ import type {
   PermissionSettings,
   SessionEntry,
   SessionMessage,
+  SessionProcessEntry,
   UserPromptContent,
 } from "@vegamo/deepcode-core";
 import { existsSync } from "node:fs";
@@ -37,6 +38,7 @@ import type {
   GitLogEntry,
   PermissionDecision,
   PluginMcpServer,
+  SerializableProcess,
   SerializableSessionEntry,
   SettingsSummary,
 } from "../shared/ipc.js";
@@ -129,11 +131,56 @@ function buildPermissionSettings(
   return { defaultMode, allow, ask, deny };
 }
 
+/**
+ * Flatten a `SessionEntry` into the JSON-safe shape the renderer expects.
+ *
+ * `entry.processes` arrives in one of three shapes depending on which code
+ * path produced the entry:
+ *   1. `Map<string, SessionProcessEntry>` — the canonical in-memory form
+ *      from `SessionManager` (used by listSessions/getSession).
+ *   2. `Record<string, SessionProcessEntry>` — the on-disk form, since
+ *      `saveSessionsIndex` serialises the Map via `Object.fromEntries`.
+ *      The cross-workspace `listWorkspaceSessions` in workspace-registry
+ *      parses the JSON directly and skips the manager's
+ *      `deserializeProcesses`, so it sees the record form.
+ *   3. `SerializableProcess[]` — already-flattened; occurs if the caller
+ *      round-tripped through toSerializableEntry previously.
+ *
+ * Without the normalisation below, case (2) crashes with
+ * `entry.processes.entries is not a function` because a plain object has
+ * no `.entries()` method.
+ */
 export function toSerializableEntry(entry: SessionEntry): SerializableSessionEntry {
-  const processes = entry.processes
-    ? Array.from(entry.processes.entries()).map(([pid, info]) => ({ pid, ...info }))
-    : [];
+  const processes = flattenProcesses(entry.processes);
   return { ...entry, processes };
+}
+
+function flattenProcesses(
+  input: SessionEntry["processes"] | SerializableProcess[] | Record<string, unknown> | null | undefined
+): SerializableProcess[] {
+  if (input == null) return [];
+  if (input instanceof Map) {
+    return Array.from(input.entries()).map(([pid, info]) => ({
+      pid: String(pid),
+      ...(info as SessionProcessEntry),
+    }));
+  }
+  if (Array.isArray(input)) {
+    return input.filter(isSerializableProcess);
+  }
+  if (typeof input === "object") {
+    return Object.entries(input as Record<string, unknown>).map(([pid, info]) => ({
+      pid,
+      ...(info as SessionProcessEntry),
+    }));
+  }
+  return [];
+}
+
+function isSerializableProcess(value: unknown): value is SerializableProcess {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.pid === "string" && typeof v.startTime === "string" && typeof v.command === "string";
 }
 
 export function toSettingsSummary(root: string): SettingsSummary {
