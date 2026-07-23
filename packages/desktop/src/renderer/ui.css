@@ -409,7 +409,10 @@ select {
      fallback covers the worst-case composer (max-height textarea +
      toolbar + dock padding + a tall attachments strip) before the
      observer has had a chance to run on first paint. */
-  padding: var(--ui-space-5) var(--ui-space-4) var(--ui-composer-reserved, 360px);
+  /* Side padding scales with the viewport: tight on narrow windows, roomier
+     on wide ones — so the conversation breathes more as the window grows.
+     Bottom padding stays dynamic (composer height) via --ui-composer-reserved. */
+  padding: var(--ui-space-5) clamp(var(--ui-space-2), 3vw, var(--ui-space-5)) var(--ui-composer-reserved, 360px);
   /* Virtual padding for scrollIntoView so the snap-to-bottom leaves a
      visual gap above the composer instead of pinning the last line to
      the very edge. Combined with the ResizeObserver-driven padding
@@ -453,7 +456,12 @@ select {
 }
 
 .ui-conversation-inner {
-  max-width: 760px;
+  /* Responsive content width: the reading column grows with the window but
+     caps at 900px on very wide screens and shrinks to nearly full width on
+     narrow ones. The result is that the side margins widen continuously as
+     the window grows, instead of the old fixed 760px slab. */
+  width: 100%;
+  max-width: clamp(320px, 88%, 900px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -1059,8 +1067,13 @@ select {
    ========================================================================= */
 
 /* ── Bubble rows (alignment wrapper) ──────────────────────────────────────── */
+/* Each row holds an avatar + bubble laid out horizontally; alignment (left/right)
+   is driven by the justify-content modifier. The avatar sits beside the bubble
+   so the chat reads like a modern messenger thread. */
 .ui-bubble-row {
   display: flex;
+  align-items: flex-start;
+  gap: var(--ui-space-2);
   width: 100%;
 }
 .ui-bubble-row.user {
@@ -1074,6 +1087,69 @@ select {
 }
 .ui-bubble-row.system {
   justify-content: center;
+}
+/* Entry animation: each new row fades and slides up briefly on mount, giving
+   the thread a lively "message arriving" feel. Reduced-motion users see it
+   static (the global reduce media zeroes animation-duration). */
+@media (prefers-reduced-motion: no-preference) {
+  .ui-bubble-row {
+    animation: ui-bubble-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+@keyframes ui-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Avatars (role-colored circles beside each bubble) ───────────────────── */
+.ui-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--ui-radius-pill);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-shadow-sm);
+  user-select: none;
+}
+.ui-avatar--user {
+  background: var(--ui-surface-raised);
+  color: var(--ui-text-dim);
+}
+.ui-avatar--assistant {
+  background: linear-gradient(135deg, var(--ui-accent), color-mix(in srgb, var(--ui-accent) 60%, #fff));
+}
+.ui-avatar--thinking {
+  background: color-mix(in srgb, var(--ui-warning, #d08b1e) 22%, var(--ui-surface-raised));
+  color: var(--ui-warning, #d08b1e);
+  border-color: color-mix(in srgb, var(--ui-warning, #d08b1e) 40%, transparent);
+}
+.ui-avatar--tool {
+  background: color-mix(in srgb, var(--ui-accent) 18%, var(--ui-surface-raised));
+  color: var(--ui-accent);
+}
+.ui-avatar--mcp {
+  background: color-mix(in srgb, #7b61ff 22%, var(--ui-surface-raised));
+  color: #9b87ff;
+  border-color: color-mix(in srgb, #7b61ff 40%, transparent);
+}
+/* Bubbles share the row with the avatar now; let them take available space but
+   still respect their max-width cap so long content wraps rather than spanning
+   the whole row. */
+.ui-bubble-row > .ui-bubble,
+.ui-bubble-row > .ui-tool-card {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* ── Bubble base ──────────────────────────────────────────────────────────── */

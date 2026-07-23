@@ -17,6 +17,20 @@ function Md({ text }: { text: string }): JSX.Element {
   return <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
 }
 
+/**
+ * Circular avatar shown beside each bubble. Colored by role so the chat reads
+ * at a glance — user (neutral), assistant (accent), thinking (amber), tool
+ * (type-tinted). Mirrors the avatar-per-message layout of modern chat UIs.
+ */
+function Avatar({ role }: { role: "user" | "assistant" | "thinking" | "tool" | "mcp" }): JSX.Element {
+  const glyph = role === "user" ? "U" : role === "assistant" ? "AI" : role === "thinking" ? "✦" : "⚡";
+  return (
+    <div className={`ui-avatar ui-avatar--${role}`} aria-hidden="true">
+      {glyph}
+    </div>
+  );
+}
+
 /** Map tool name → CSS modifier for visual differentiation. */
 function toolCls(name: string): string {
   const n = name.toLowerCase();
@@ -177,6 +191,7 @@ function UserBubble({ message }: { message: SessionMessage }): JSX.Element {
         <span style={{ whiteSpace: "pre-wrap" }}>{message.content || t("msg.noContent")}</span>
         {attachments > 0 ? <span className="ui-bubble-attach">📎 {attachments}</span> : null}
       </div>
+      <Avatar role="user" />
     </div>
   );
 }
@@ -223,6 +238,7 @@ function ThinkingBlock({
 
   return (
     <div className="ui-bubble-row assistant">
+      <Avatar role="thinking" />
       <div className="ui-bubble thinking">
         <button className="ui-thinking-toggle" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
           <span className="ui-thinking-icon">{expanded ? "🧠" : "💭"}</span>
@@ -245,6 +261,7 @@ function AssistantBubble({ message }: { message: SessionMessage }): JSX.Element 
   const content = (message.content || "").trim();
   return (
     <div className="ui-bubble-row assistant">
+      <Avatar role="assistant" />
       <div className="ui-bubble assistant">{content ? <Md text={content} /> : null}</div>
     </div>
   );
@@ -396,8 +413,11 @@ export function Message({
   }
 
   if (message.role === "tool") {
+    const toolName = buildToolSummary(message).name.toLowerCase();
+    const avatarRole: "tool" | "mcp" = toolName.startsWith("mcp") || toolName.startsWith("mcp__") ? "mcp" : "tool";
     return (
       <div className="ui-bubble-row tool">
+        <Avatar role={avatarRole} />
         <ToolCard message={message} />
       </div>
     );
