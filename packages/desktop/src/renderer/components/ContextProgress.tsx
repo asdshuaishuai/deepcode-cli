@@ -10,26 +10,44 @@ type Props = {
 };
 
 /**
- * Slim gauge under the composer showing how full the active context is relative
- * to the model's automatic-compaction threshold. Hidden until a session has
- * accumulated context, and tints amber as it nears compaction.
+ * Animated gauge under the composer showing how full the active context is
+ * relative to the model's automatic-compaction threshold. Plays a toylike
+ * shimmer/flow effect while there's room, and escalates to a pulsing alert as
+ * it nears the compaction threshold. Percentage keeps two decimals so the user
+ * can watch it tick up smoothly rather than jumping in whole-point steps.
  */
 export function ContextProgress({ activeTokens, model }: Props): JSX.Element | null {
   const { t } = useI18n();
   if (activeTokens <= 0) return null;
 
   const threshold = compactTokenThreshold(model);
-  const pct = Math.min(100, Math.round((activeTokens / threshold) * 100));
-  const near = pct >= 80;
+  // Two-decimal precision — the bar creeps up visibly instead of lurching in
+  // whole-percent jumps. Clamped for the fill width; the numeric readout can
+  // exceed 100% so the user sees by how much they're over budget.
+  const ratio = activeTokens / threshold;
+  const pctRaw = ratio * 100;
+  const pct = Math.min(100, pctRaw);
+  const near = pctRaw >= 80;
+  const critical = pctRaw >= 100;
 
   return (
-    <div className="ui-context-progress" title={`${formatTokens(activeTokens)} / ${formatTokens(threshold)}`}>
+    <div
+      className={`ui-context-progress${critical ? " critical" : near ? " near" : ""}`}
+      title={`${formatTokens(activeTokens)} / ${formatTokens(threshold)}`}
+    >
       <div className="ui-context-progress-head">
         <span className="ui-context-progress-label">{t("context.compaction")}</span>
-        <span className="ui-context-progress-value">{pct}%</span>
+        <span className="ui-context-progress-value">{pctRaw.toFixed(2)}%</span>
       </div>
       <div className="ui-context-progress-track">
-        <div className={`ui-context-progress-fill${near ? " near" : ""}`} style={{ width: `${pct}%` }} />
+        {/* 80% threshold tick — a faint marker where "near compaction" begins. */}
+        <span className="ui-context-progress-tick" style={{ left: "80%" }} />
+        <div
+          className={`ui-context-progress-fill${critical ? " critical" : near ? " near" : ""}`}
+          style={{ width: `${pct}%` }}
+        >
+          <span className="ui-context-progress-shine" />
+        </div>
       </div>
     </div>
   );
