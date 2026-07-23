@@ -4,6 +4,7 @@ import { api } from "../api";
 import { useI18n } from "../i18n";
 import { renderMarkdown } from "../markdown";
 import { Button, StatusDot, Switch } from "../ui/index";
+import { builtinLabel, isBundledSkill } from "./PluginMcpPanel";
 
 /** Which plugin the workspace detail pane is showing. */
 export type PluginSelection = { kind: "mcp" | "skill" | "plugin"; name: string };
@@ -88,11 +89,11 @@ function stripFrontmatter(md: string): string {
 }
 
 /**
- * VSCode-style plugin detail pane (item 3): the left list carries basic info,
- * this workspace pane carries the full picture. Skills render their SKILL.md;
- * MCP servers show meta/capabilities/source with author + repo when derivable.
+ * Plugin detail pane — unified four-section layout shared by all kinds:
+ *   hero card → capabilities → actions → documentation.
+ * The left list carries only summary info; this pane carries the full picture.
  */
-export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill, onBack }: Props): JSX.Element {
+export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill }: Props): JSX.Element {
   const { t } = useI18n();
   const [servers, setServers] = useState<PluginMcpServer[]>([]);
   const [doc, setDoc] = useState<string>("");
@@ -140,6 +141,7 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill,
     );
   }
 
+  // ── Skill detail (user-authored OR bundled) ──────────────────────────────
   if (selection.kind === "skill") {
     if (!skill) {
       return (
@@ -148,33 +150,48 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill,
         </div>
       );
     }
+    const bundled = isBundledSkill(skill);
     const attached = selectedSkills.includes(skill.name);
+    const displayName = bundled ? builtinLabel(t, skill.name, "name", skill.name) : skill.name;
+    const displayDesc = bundled ? builtinLabel(t, skill.name, "desc", skill.description) : skill.description;
     return (
       <div className="ui-plugin-detail">
-        <header className="ui-plugin-detail-head">
-          <div className="ui-plugin-detail-title">
-            <span className="ui-plugin-detail-name">{skill.name}</span>
-            {skill.isLoaded ? <span className="ui-mcp-badge">{t("plugins.skills.loaded")}</span> : null}
+        {/* Hero card */}
+        <header className="ui-detail-hero">
+          <div className="ui-detail-hero-title">
+            <span className="ui-detail-hero-name">{displayName}</span>
+            {bundled ? <span className="ui-mcp-badge builtin">{t("plugins.builtin.badge")}</span> : null}
+            {!bundled && skill.isLoaded ? <span className="ui-mcp-badge">{t("plugins.skills.loaded")}</span> : null}
           </div>
-          <div className="ui-plugin-detail-actions">
+          {displayDesc ? <p className="ui-detail-hero-lead">{displayDesc}</p> : null}
+          <dl className="ui-detail-meta">
+            <div className="ui-detail-meta-row">
+              <dt>{t("plugins.detail.source")}</dt>
+              <dd>{skillSourceLabel(skill.path)}</dd>
+            </div>
+            <div className="ui-detail-meta-row">
+              <dt>{t("plugins.detail.path")}</dt>
+              <dd className="ui-plugin-mono">{skill.path}</dd>
+            </div>
+          </dl>
+        </header>
+
+        {/* Actions */}
+        {bundled ? (
+          <section className="ui-detail-actions">
+            <span className="ui-detail-readonly">{t("plugins.builtin.readonly")}</span>
+          </section>
+        ) : (
+          <section className="ui-detail-actions">
             <label className="ui-plugin-detail-toggle">
               <span>{t("plugins.skills.attach")}</span>
               <Switch checked={attached} onChange={() => onToggleSkill(skill.name)} />
             </label>
-          </div>
-        </header>
+          </section>
+        )}
 
-        {skill.description ? <p className="ui-plugin-detail-lead">{skill.description}</p> : null}
-
-        <section className="ui-plugin-detail-section">
-          <h3>{t("plugins.detail.source")}</h3>
-          <dl className="ui-plugin-meta">
-            <dt>{skillSourceLabel(skill.path)}</dt>
-            <dd className="ui-plugin-mono">{skill.path}</dd>
-          </dl>
-        </section>
-
-        <section className="ui-plugin-detail-section">
+        {/* Documentation */}
+        <section className="ui-detail-doc">
           <h3>{t("plugins.detail.doc")}</h3>
           {docError ? (
             <div className="ui-plugin-detail-empty">{t("plugins.detail.docError")}</div>
@@ -186,11 +203,12 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill,
     );
   }
 
-  // ── Built-in plugin detail ─────────────────────────────────────────────────
+  // ── Built-in plugin detail (browser-skill) ───────────────────────────────
   if (selection.kind === "plugin") {
     return <BuiltinPluginDetail name={selection.name} />;
   }
 
+  // ── MCP server detail ────────────────────────────────────────────────────
   const server = servers.find((s) => s.name === selection.name) ?? null;
   if (!server) {
     return (
@@ -213,67 +231,48 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill,
   const remove = async () => {
     await api.pluginRemoveMcpServer(server.name);
     await reloadServers();
-    onBack();
   };
 
   return (
     <div className="ui-plugin-detail">
-      <header className="ui-plugin-detail-head">
-        <div className="ui-plugin-detail-title">
+      {/* Hero card */}
+      <header className="ui-detail-hero">
+        <div className="ui-detail-hero-title">
           {status ? <StatusDot status={status.status} /> : <StatusDot />}
-          <span className="ui-plugin-detail-name">{server.name}</span>
+          <span className="ui-detail-hero-name">{server.name}</span>
           {server.builtin ? <span className="ui-mcp-badge">{t("mcp.builtin")}</span> : null}
         </div>
-        <div className="ui-plugin-detail-actions">
-          <label className="ui-plugin-detail-toggle">
-            <span>{t("mcp.enableTitle")}</span>
-            <Switch checked={server.enabled} onChange={() => void setEnabled(!server.enabled)} />
-          </label>
-          {server.builtin ? null : (
-            <Button size="sm" variant="subtle" onClick={() => void remove()} title={t("mcp.removeTitle")}>
-              {t("common.remove")}
-            </Button>
-          )}
-        </div>
-      </header>
-
-      <section className="ui-plugin-detail-section">
-        <h3>{t("plugins.detail.overview")}</h3>
-        <dl className="ui-plugin-meta">
-          <dt>{t("mcp.command")}</dt>
-          <dd className="ui-plugin-mono">
-            {server.command} {server.args}
-          </dd>
+        <dl className="ui-detail-meta">
+          <div className="ui-detail-meta-row">
+            <dt>{t("mcp.command")}</dt>
+            <dd className="ui-plugin-mono">
+              {server.command} {server.args}
+            </dd>
+          </div>
+          <div className="ui-detail-meta-row">
+            <dt>{t("plugins.detail.source")}</dt>
+            <dd>
+              {source.label}
+              {source.author ? ` · ${source.author}` : ""}
+            </dd>
+          </div>
+          {source.registryUrl ? (
+            <div className="ui-detail-meta-row">
+              <dt>{t("plugins.detail.repository")}</dt>
+              <dd className="ui-plugin-mono">{source.registryUrl}</dd>
+            </div>
+          ) : null}
           {server.env.trim() ? (
-            <>
+            <div className="ui-detail-meta-row">
               <dt>{t("mcp.env")}</dt>
               <dd className="ui-plugin-mono">{server.env}</dd>
-            </>
+            </div>
           ) : null}
         </dl>
-      </section>
+      </header>
 
-      <section className="ui-plugin-detail-section">
-        <h3>{t("plugins.detail.source")}</h3>
-        <dl className="ui-plugin-meta">
-          <dt>{source.label}</dt>
-          {source.registryUrl ? <dd className="ui-plugin-mono">{source.registryUrl}</dd> : null}
-          {source.repoUrl ? (
-            <>
-              <dt>{t("plugins.detail.repository")}</dt>
-              <dd className="ui-plugin-mono">{source.repoUrl}</dd>
-            </>
-          ) : null}
-          {source.author ? (
-            <>
-              <dt>{t("plugins.detail.author")}</dt>
-              <dd>{source.author}</dd>
-            </>
-          ) : null}
-        </dl>
-      </section>
-
-      <section className="ui-plugin-detail-section">
+      {/* Capabilities */}
+      <section className="ui-detail-caps">
         <h3>{t("plugins.detail.capabilities")}</h3>
         {hasCaps ? (
           <div className="ui-plugin-caps">
@@ -324,11 +323,24 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill,
           <div className="ui-plugin-detail-empty">{t("plugins.detail.noCapabilities")}</div>
         )}
       </section>
+
+      {/* Actions */}
+      <section className="ui-detail-actions">
+        <label className="ui-plugin-detail-toggle">
+          <span>{t("mcp.enableTitle")}</span>
+          <Switch checked={server.enabled} onChange={() => void setEnabled(!server.enabled)} />
+        </label>
+        {server.builtin ? null : (
+          <Button size="sm" variant="subtle" onClick={() => void remove()} title={t("mcp.removeTitle")}>
+            {t("common.remove")}
+          </Button>
+        )}
+      </section>
     </div>
   );
 }
 
-/** Detail pane for an Orca built-in plugin (non-removable). */
+/** Detail pane for a built-in plugin (non-removable). */
 function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
   const { t } = useI18n();
   const [info, setInfo] = useState<BuiltinPluginInfo | null>(null);
@@ -347,26 +359,33 @@ function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
     };
   }, [name]);
 
+  const displayName = builtinLabel(t, name, "name", name);
+  const displayDesc = builtinLabel(t, name, "desc", info?.description ?? "");
+
   return (
     <div className="ui-plugin-detail">
-      <header className="ui-plugin-detail-head">
-        <div className="ui-plugin-detail-title">
-          <span className="ui-plugin-detail-name">{name}</span>
+      {/* Hero card */}
+      <header className="ui-detail-hero">
+        <div className="ui-detail-hero-title">
+          <span className="ui-detail-hero-name">{displayName}</span>
           <span className="ui-mcp-badge builtin">{t("plugins.builtin.badge")}</span>
         </div>
+        {displayDesc ? <p className="ui-detail-hero-lead">{displayDesc}</p> : null}
+        <dl className="ui-detail-meta">
+          <div className="ui-detail-meta-row">
+            <dt>{t("plugins.detail.source")}</dt>
+            <dd>{info ? `v${info.version} · ${info.category}` : ""}</dd>
+          </div>
+        </dl>
       </header>
 
-      {info?.description ? <p className="ui-plugin-detail-lead">{info.description}</p> : null}
-
-      <section className="ui-plugin-detail-section">
-        <h3>{t("plugins.detail.source")}</h3>
-        <dl className="ui-plugin-meta">
-          <dt>{t("plugins.builtin.badge")}</dt>
-          <dd className="ui-plugin-mono">{info ? `v${info.version} · ${info.category}` : ""}</dd>
-        </dl>
+      {/* Actions — built-in items are read-only */}
+      <section className="ui-detail-actions">
+        <span className="ui-detail-readonly">{t("plugins.builtin.readonly")}</span>
       </section>
 
-      <section className="ui-plugin-detail-section">
+      {/* Documentation */}
+      <section className="ui-detail-doc">
         <h3>{t("plugins.detail.doc")}</h3>
         {doc ? (
           <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(doc) }} />

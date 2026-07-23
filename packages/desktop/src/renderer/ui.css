@@ -3603,6 +3603,86 @@ button.ui-topbar-pill {
   font-family: var(--ui-font-mono);
 }
 
+/* ── Plugin detail — unified hero/caps/actions/doc layout ─────────────────── */
+.ui-detail-hero {
+  padding: var(--ui-space-4);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-surface-raised);
+  margin-bottom: var(--ui-space-4);
+}
+.ui-detail-hero-title {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  flex-wrap: wrap;
+}
+.ui-detail-hero-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+.ui-detail-hero-lead {
+  margin: var(--ui-space-2) 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ui-text-dim);
+}
+.ui-detail-meta {
+  margin: var(--ui-space-3) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+}
+.ui-detail-meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ui-space-3);
+}
+.ui-detail-meta-row dt {
+  flex: none;
+  width: 88px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ui-text-faint);
+}
+.ui-detail-meta-row dd {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ui-text-dim);
+  word-break: break-all;
+}
+.ui-detail-caps,
+.ui-detail-actions,
+.ui-detail-doc {
+  margin-bottom: var(--ui-space-4);
+}
+.ui-detail-caps h3,
+.ui-detail-doc h3 {
+  margin: 0 0 var(--ui-space-2);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ui-text-faint);
+}
+.ui-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-border-soft);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface-sunken);
+}
+.ui-detail-readonly {
+  font-size: 12px;
+  color: var(--ui-text-faint);
+  font-style: italic;
+}
+
 /* ── Process output panel (Ctrl+O toggle) ──────────────────────────────────── */
 .ui-process-panel {
   display: flex;

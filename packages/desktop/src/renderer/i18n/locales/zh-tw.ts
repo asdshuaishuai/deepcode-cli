@@ -150,6 +150,7 @@ export const zhTW: Record<MessageKey, string> = {
   "plugins.detail.empty": "在左側選擇一個外掛以檢視詳情。",
   "plugins.detail.overview": "概覽",
   "plugins.detail.source": "來源",
+  "plugins.detail.path": "路徑",
   "plugins.detail.capabilities": "能力",
   "plugins.detail.author": "作者",
   "plugins.detail.repository": "倉庫",
@@ -163,6 +164,21 @@ export const zhTW: Record<MessageKey, string> = {
   "plugins.builtin.badge": "內置",
   "plugins.builtin.none": "暫無內置插件。",
   "plugins.builtin.hint": "內置插件隨 DeepOrca 一起發佈，不可卸載或禁用。",
+  "plugins.builtin.readonly": "内置项不可修改或删除。",
+  "builtin.browser-skill.name": "浏览器技能",
+  "builtin.browser-skill.desc":
+    "通过 bsk CLI 驱动用户的真实 Chromium 浏览器——访问页面、填写表单、抓取数据、点击流程、回归测试界面。",
+  "builtin.deepcode-self-refer.name": "DeepOrca 自引用",
+  "builtin.deepcode-self-refer.desc":
+    "回答关于 DeepOrca 本身的问题——功能、配置、斜杠命令、技能、MCP 集成、权限、通知、会话持久化和故障排查。",
+  "builtin.skill-digester.name": "技能消化器",
+  "builtin.skill-digester.desc":
+    "审查并改进其他技能的 SKILL.md 描述,指导将 Agent Skill 安装到用户或项目的 .agents/skills 根目录。",
+  "builtin.skill-writer.name": "技能编写器",
+  "builtin.skill-writer.desc": "指导用户为 AI 智能体创建、更新、调试和验证 Agent Skill。",
+  "builtin.karpathy-guidelines.name": "Karpathy 准则",
+  "builtin.karpathy-guidelines.desc":
+    "减少常见 LLM 编码错误的行为准则——避免过度复杂化、做精准的外科手术式改动、暴露假设、定义可验证的成功标准。",
   "context.compaction": "上下文",
 
   // ── Model modal ───────────────────────────────────────────

@@ -149,6 +149,7 @@ export const ja: Record<MessageKey, string> = {
   "plugins.detail.empty": "詳細を表示するには左側でプラグインを選択してください。",
   "plugins.detail.overview": "概要",
   "plugins.detail.source": "ソース",
+  "plugins.detail.path": "パス",
   "plugins.detail.capabilities": "機能",
   "plugins.detail.author": "作者",
   "plugins.detail.repository": "リポジトリ",
@@ -162,6 +163,22 @@ export const ja: Record<MessageKey, string> = {
   "plugins.builtin.badge": "内蔵",
   "plugins.builtin.none": "内蔵プラグインはありません。",
   "plugins.builtin.hint": "内蔵プラグインは DeepOrca に同梱されており、アンインストールや無効化はできません。",
+  "plugins.builtin.readonly": "内蔵アイテムは変更や削除できません。",
+  "builtin.browser-skill.name": "Browser Skill",
+  "builtin.browser-skill.desc":
+    "Drive the user's real Chromium browser through the bsk CLI — visit pages, fill forms, scrape data, click through flows, regression-test UI.",
+  "builtin.deepcode-self-refer.name": "DeepOrca Self-Refer",
+  "builtin.deepcode-self-refer.desc":
+    "Answers questions about DeepOrca itself — features, configuration, slash commands, Skills, MCP integration, permissions, notifications, session persistence, and troubleshooting.",
+  "builtin.skill-digester.name": "Skill Digester",
+  "builtin.skill-digester.desc":
+    "Reviews and improves another skill's SKILL.md description, and guides Agent Skill installation into user or project .agents/skills roots.",
+  "builtin.skill-writer.name": "Skill Writer",
+  "builtin.skill-writer.desc":
+    "Guide users through creating, updating, debugging, and validating Agent Skills for AI agents.",
+  "builtin.karpathy-guidelines.name": "Karpathy Guidelines",
+  "builtin.karpathy-guidelines.desc":
+    "Behavioral guidelines to reduce common LLM coding mistakes — avoid overcomplication, make surgical changes, surface assumptions, define verifiable success criteria.",
   "context.compaction": "コンテキスト",
 
   // ── Model modal ───────────────────────────────────────────

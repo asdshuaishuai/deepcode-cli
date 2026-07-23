@@ -149,6 +149,7 @@ export const ko: Record<MessageKey, string> = {
   "plugins.detail.empty": "세부 정보를 보려면 왼쪽에서 플러그인을 선택하세요.",
   "plugins.detail.overview": "개요",
   "plugins.detail.source": "출처",
+  "plugins.detail.path": "경로",
   "plugins.detail.capabilities": "기능",
   "plugins.detail.author": "작성자",
   "plugins.detail.repository": "저장소",
@@ -162,6 +163,22 @@ export const ko: Record<MessageKey, string> = {
   "plugins.builtin.badge": "내장",
   "plugins.builtin.none": "내장 플러그인이 없습니다.",
   "plugins.builtin.hint": "내장 플러그인은 DeepOrca와 함께 제공되며 제거하거나 비활성화할 수 없습니다.",
+  "plugins.builtin.readonly": "내장 항목은 수정하거나 삭제할 수 없습니다.",
+  "builtin.browser-skill.name": "Browser Skill",
+  "builtin.browser-skill.desc":
+    "Drive the user's real Chromium browser through the bsk CLI — visit pages, fill forms, scrape data, click through flows, regression-test UI.",
+  "builtin.deepcode-self-refer.name": "DeepOrca Self-Refer",
+  "builtin.deepcode-self-refer.desc":
+    "Answers questions about DeepOrca itself — features, configuration, slash commands, Skills, MCP integration, permissions, notifications, session persistence, and troubleshooting.",
+  "builtin.skill-digester.name": "Skill Digester",
+  "builtin.skill-digester.desc":
+    "Reviews and improves another skill's SKILL.md description, and guides Agent Skill installation into user or project .agents/skills roots.",
+  "builtin.skill-writer.name": "Skill Writer",
+  "builtin.skill-writer.desc":
+    "Guide users through creating, updating, debugging, and validating Agent Skills for AI agents.",
+  "builtin.karpathy-guidelines.name": "Karpathy Guidelines",
+  "builtin.karpathy-guidelines.desc":
+    "Behavioral guidelines to reduce common LLM coding mistakes — avoid overcomplication, make surgical changes, surface assumptions, define verifiable success criteria.",
   "context.compaction": "컨텍스트",
 
   // ── Model modal ───────────────────────────────────────────

@@ -1,9 +1,30 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 import type { BuiltinPluginInfo, PluginMcpServer, SkillInfo } from "../../shared/ipc";
 import { api } from "../api";
-import { useI18n } from "../i18n";
+import { useI18n, type MessageKey } from "../i18n";
 import { Button, Input, StatusDot, Switch } from "../ui/index";
 import type { PluginSelection } from "./PluginDetail";
+
+/**
+ * Look up the localized display name/description for a built-in item (plugin or
+ * bundled skill). Falls back to the raw value when no i18n entry exists.
+ * i18n rule: zh/zh-TW/zh-HK show Simplified Chinese; en/ja/ko show English.
+ */
+export function builtinLabel(
+  t: (key: MessageKey) => string,
+  name: string,
+  field: "name" | "desc",
+  fallback: string
+): string {
+  const key = `builtin.${name}.${field}` as MessageKey;
+  const value = t(key);
+  return value === key ? fallback : value;
+}
+
+/** A skill is "built-in" (shipped with the product) when its path is bundled:. */
+export function isBundledSkill(skill: SkillInfo): boolean {
+  return skill.path.startsWith("bundled:");
+}
 
 type Props = {
   skills: SkillInfo[];
@@ -156,9 +177,6 @@ export function PluginMcpPanel({
                       {srv.name}
                       {srv.builtin ? <span className="ui-mcp-badge">{t("mcp.builtin")}</span> : null}
                     </span>
-                    <span className="ui-mcp-row-cmd" title={`${srv.command} ${srv.args}`}>
-                      {srv.enabled ? `${srv.command} ${srv.args}`.trim() : t("mcp.disabledNote")}
-                    </span>
                   </button>
                   <div className="ui-mcp-row-actions">
                     <Switch checked={srv.enabled} onChange={() => void toggle(srv)} title={t("mcp.enableTitle")} />
@@ -215,71 +233,106 @@ export function PluginMcpPanel({
             )}
           </>
         ) : section === "skills" ? (
-          <>
-            <div className="ui-skill-toolbar">
-              <span className="ui-skill-toolbar-count">{skills.length}</span>
-              {onRefreshSkills ? (
-                <Button size="sm" variant="subtle" onClick={() => void refreshSkills()} disabled={refreshing}>
-                  ↻ {t("scm.refresh")}
-                </Button>
-              ) : null}
-            </div>
-            {skills.length === 0 ? (
-              <div className="ui-side-panel-empty">{t("plugins.skills.none")}</div>
-            ) : (
-              skills.map((skill) => {
-                const isSel = selected?.kind === "skill" && selected.name === skill.name;
-                return (
-                  <div key={skill.name} className={`ui-plugin-item${isSel ? " selected" : ""}`}>
-                    <button
-                      type="button"
-                      className="ui-plugin-item-main"
-                      onClick={() => onSelect({ kind: "skill", name: skill.name })}
-                    >
-                      <div className="ui-plugin-item-header">
-                        <span className="ui-plugin-item-name">{skill.name}</span>
-                        {skill.isLoaded ? <span className="ui-mcp-badge">{t("plugins.skills.loaded")}</span> : null}
+          (() => {
+            // Bundled skills are shown under the Plugins tab as built-in items;
+            // the Skills tab only lists user-authored skills.
+            const userSkills = skills.filter((s) => !isBundledSkill(s));
+            return (
+              <>
+                <div className="ui-skill-toolbar">
+                  <span className="ui-skill-toolbar-count">{userSkills.length}</span>
+                  {onRefreshSkills ? (
+                    <Button size="sm" variant="subtle" onClick={() => void refreshSkills()} disabled={refreshing}>
+                      ↻ {t("scm.refresh")}
+                    </Button>
+                  ) : null}
+                </div>
+                {userSkills.length === 0 ? (
+                  <div className="ui-side-panel-empty">{t("plugins.skills.none")}</div>
+                ) : (
+                  userSkills.map((skill) => {
+                    const isSel = selected?.kind === "skill" && selected.name === skill.name;
+                    return (
+                      <div key={skill.name} className={`ui-plugin-item${isSel ? " selected" : ""}`}>
+                        <button
+                          type="button"
+                          className="ui-plugin-item-main"
+                          onClick={() => onSelect({ kind: "skill", name: skill.name })}
+                        >
+                          <div className="ui-plugin-item-header">
+                            <span className="ui-plugin-item-name">{skill.name}</span>
+                            {skill.isLoaded ? <span className="ui-mcp-badge">{t("plugins.skills.loaded")}</span> : null}
+                          </div>
+                        </button>
+                        <Switch
+                          checked={selectedSkills.includes(skill.name)}
+                          onChange={() => onToggleSkill(skill.name)}
+                          title={t("plugins.skills.attach")}
+                        />
                       </div>
-                      {skill.description ? <div className="ui-skill-desc">{skill.description}</div> : null}
-                    </button>
-                    <Switch
-                      checked={selectedSkills.includes(skill.name)}
-                      onChange={() => onToggleSkill(skill.name)}
-                      title={t("plugins.skills.attach")}
-                    />
-                  </div>
-                );
-              })
-            )}
-            <div className="ui-skill-hint">{t("plugins.skills.locations")}</div>
-          </>
+                    );
+                  })
+                )}
+                <div className="ui-skill-hint">{t("plugins.skills.locations")}</div>
+              </>
+            );
+          })()
         ) : (
-          <>
-            {/* Orca built-in plugins — non-removable */}
-            {builtinPlugins.length === 0 ? (
-              <div className="ui-side-panel-empty">{t("plugins.builtin.none")}</div>
-            ) : (
-              builtinPlugins.map((plugin) => {
-                const isSel = selected?.kind === "plugin" && selected.name === plugin.name;
-                return (
-                  <div key={plugin.name} className={`ui-plugin-item${isSel ? " selected" : ""}`}>
-                    <button
-                      type="button"
-                      className="ui-plugin-item-main"
-                      onClick={() => onSelect({ kind: "plugin", name: plugin.name })}
-                    >
-                      <div className="ui-plugin-item-header">
-                        <span className="ui-plugin-item-name">{plugin.name}</span>
-                        <span className="ui-mcp-badge builtin">{t("plugins.builtin.badge")}</span>
-                      </div>
-                      {plugin.description ? <div className="ui-skill-desc">{plugin.description}</div> : null}
-                    </button>
-                  </div>
-                );
-              })
-            )}
-            <div className="ui-skill-hint">{t("plugins.builtin.hint")}</div>
-          </>
+          (() => {
+            // Plugins tab: built-in plugins (browser-skill) + bundled skills
+            // (deepcode-self-refer etc.), all non-removable built-in items.
+            const bundled = skills.filter(isBundledSkill);
+            const isEmpty = builtinPlugins.length === 0 && bundled.length === 0;
+            return (
+              <>
+                {isEmpty ? (
+                  <div className="ui-side-panel-empty">{t("plugins.builtin.none")}</div>
+                ) : (
+                  <>
+                    {builtinPlugins.map((plugin) => {
+                      const isSel = selected?.kind === "plugin" && selected.name === plugin.name;
+                      return (
+                        <div key={plugin.name} className={`ui-plugin-item${isSel ? " selected" : ""}`}>
+                          <button
+                            type="button"
+                            className="ui-plugin-item-main"
+                            onClick={() => onSelect({ kind: "plugin", name: plugin.name })}
+                          >
+                            <div className="ui-plugin-item-header">
+                              <span className="ui-plugin-item-name">
+                                {builtinLabel(t, plugin.name, "name", plugin.name)}
+                              </span>
+                              <span className="ui-mcp-badge builtin">{t("plugins.builtin.badge")}</span>
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {bundled.map((skill) => {
+                      const isSel = selected?.kind === "skill" && selected.name === skill.name;
+                      return (
+                        <div key={skill.name} className={`ui-plugin-item${isSel ? " selected" : ""}`}>
+                          <button
+                            type="button"
+                            className="ui-plugin-item-main"
+                            onClick={() => onSelect({ kind: "skill", name: skill.name })}
+                          >
+                            <div className="ui-plugin-item-header">
+                              <span className="ui-plugin-item-name">
+                                {builtinLabel(t, skill.name, "name", skill.name)}
+                              </span>
+                              <span className="ui-mcp-badge builtin">{t("plugins.builtin.badge")}</span>
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+                <div className="ui-skill-hint">{t("plugins.builtin.hint")}</div>
+              </>
+            );
+          })()
         )}
       </div>
     </div>

@@ -155,6 +155,7 @@ export const en = {
   "plugins.detail.empty": "Select a plugin on the left to view its details.",
   "plugins.detail.overview": "Overview",
   "plugins.detail.source": "Source",
+  "plugins.detail.path": "Path",
   "plugins.detail.capabilities": "Capabilities",
   "plugins.detail.author": "Author",
   "plugins.detail.repository": "Repository",
@@ -167,6 +168,22 @@ export const en = {
   "plugins.builtin.badge": "Built-in",
   "plugins.builtin.none": "No built-in plugins available.",
   "plugins.builtin.hint": "Built-in plugins ship with DeepOrca and cannot be uninstalled or disabled.",
+  "plugins.builtin.readonly": "Built-in items cannot be modified or removed.",
+  "builtin.browser-skill.name": "Browser Skill",
+  "builtin.browser-skill.desc":
+    "Drive the user's real Chromium browser through the bsk CLI — visit pages, fill forms, scrape data, click through flows, regression-test UI.",
+  "builtin.deepcode-self-refer.name": "DeepOrca Self-Refer",
+  "builtin.deepcode-self-refer.desc":
+    "Answers questions about DeepOrca itself — features, configuration, slash commands, Skills, MCP integration, permissions, notifications, session persistence, and troubleshooting.",
+  "builtin.skill-digester.name": "Skill Digester",
+  "builtin.skill-digester.desc":
+    "Reviews and improves another skill's SKILL.md description, and guides Agent Skill installation into user or project .agents/skills roots.",
+  "builtin.skill-writer.name": "Skill Writer",
+  "builtin.skill-writer.desc":
+    "Guide users through creating, updating, debugging, and validating Agent Skills for AI agents.",
+  "builtin.karpathy-guidelines.name": "Karpathy Guidelines",
+  "builtin.karpathy-guidelines.desc":
+    "Behavioral guidelines to reduce common LLM coding mistakes — avoid overcomplication, make surgical changes, surface assumptions, define verifiable success criteria.",
   "context.compaction": "Context",
 
   // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
@@ -572,6 +589,7 @@ export const zh: Record<MessageKey, string> = {
   "plugins.detail.empty": "在左侧选择一个插件以查看详情。",
   "plugins.detail.overview": "概览",
   "plugins.detail.source": "来源",
+  "plugins.detail.path": "路径",
   "plugins.detail.capabilities": "能力",
   "plugins.detail.author": "作者",
   "plugins.detail.repository": "仓库",
@@ -585,6 +603,21 @@ export const zh: Record<MessageKey, string> = {
   "plugins.builtin.badge": "内置",
   "plugins.builtin.none": "暂无内置插件。",
   "plugins.builtin.hint": "内置插件随 DeepOrca 一起发布，不可卸载或禁用。",
+  "plugins.builtin.readonly": "内置项不可修改或删除。",
+  "builtin.browser-skill.name": "浏览器技能",
+  "builtin.browser-skill.desc":
+    "通过 bsk CLI 驱动用户的真实 Chromium 浏览器——访问页面、填写表单、抓取数据、点击流程、回归测试界面。",
+  "builtin.deepcode-self-refer.name": "DeepOrca 自引用",
+  "builtin.deepcode-self-refer.desc":
+    "回答关于 DeepOrca 本身的问题——功能、配置、斜杠命令、技能、MCP 集成、权限、通知、会话持久化和故障排查。",
+  "builtin.skill-digester.name": "技能消化器",
+  "builtin.skill-digester.desc":
+    "审查并改进其他技能的 SKILL.md 描述,指导将 Agent Skill 安装到用户或项目的 .agents/skills 根目录。",
+  "builtin.skill-writer.name": "技能编写器",
+  "builtin.skill-writer.desc": "指导用户为 AI 智能体创建、更新、调试和验证 Agent Skill。",
+  "builtin.karpathy-guidelines.name": "Karpathy 准则",
+  "builtin.karpathy-guidelines.desc":
+    "减少常见 LLM 编码错误的行为准则——避免过度复杂化、做精准的外科手术式改动、暴露假设、定义可验证的成功标准。",
   "context.compaction": "上下文",
 
   // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
