@@ -167,7 +167,7 @@ export const ja: Record<MessageKey, string> = {
   "builtin.browser-skill.name": "Browser Skill",
   "builtin.browser-skill.desc":
     "Drive the user's real Chromium browser through the bsk CLI — visit pages, fill forms, scrape data, click through flows, regression-test UI.",
-  "builtin.deepcode-self-refer.name": "DeepOrca Self-Refer",
+  "builtin.deepcode-self-refer.name": "Deep Code Self-Refer",
   "builtin.deepcode-self-refer.desc":
     "Answers questions about DeepOrca itself — features, configuration, slash commands, Skills, MCP integration, permissions, notifications, session persistence, and troubleshooting.",
   "builtin.skill-digester.name": "Skill Digester",

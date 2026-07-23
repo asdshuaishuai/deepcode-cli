@@ -168,7 +168,7 @@ export const zhTW: Record<MessageKey, string> = {
   "builtin.browser-skill.name": "浏览器技能",
   "builtin.browser-skill.desc":
     "通过 bsk CLI 驱动用户的真实 Chromium 浏览器——访问页面、填写表单、抓取数据、点击流程、回归测试界面。",
-  "builtin.deepcode-self-refer.name": "DeepOrca 自引用",
+  "builtin.deepcode-self-refer.name": "Deep Code 自引用",
   "builtin.deepcode-self-refer.desc":
     "回答关于 DeepOrca 本身的问题——功能、配置、斜杠命令、技能、MCP 集成、权限、通知、会话持久化和故障排查。",
   "builtin.skill-digester.name": "技能消化器",
