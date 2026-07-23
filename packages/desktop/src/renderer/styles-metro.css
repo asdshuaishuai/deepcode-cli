@@ -107,11 +107,11 @@
   backdrop-filter: blur(20px);
 }
 
-/* 窗口控件组(Metro 扁平磁贴风):凹陷背景 + 直角按钮。 */
+/* Metro caption controls: keep the bare container from ui.css; only restyle hover. */
 .ui-window-controls.win {
-  background: var(--metro-bg-recessed);
-  border-color: var(--ui-border-soft);
-  border-radius: var(--ui-radius-sm);
+  background: none;
+  border: 0;
+  border-radius: 0;
 }
 .ui-win-ctrl {
   border-radius: 0;
@@ -122,6 +122,9 @@
   color: #fff;
 }
 .ui-win-ctrl.close:hover {
+  background: var(--metro-red);
+}
+.ui-win-ctrl.close:active {
   background: var(--metro-red);
 }
 
