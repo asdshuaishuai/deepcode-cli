@@ -107,7 +107,22 @@ export const IpcEvent = {
   ProcessStdout: "event:processStdout",
   ProjectRootChanged: "event:projectRootChanged",
   PluginEvent: "event:pluginEvent",
+  CodegraphProgress: "event:codegraphProgress",
 } as const;
+
+/** Payload for the CodegraphProgress event (streamed indexing output). */
+export type CodegraphProgressEvent = {
+  /** The workspace root being indexed. */
+  root: string;
+  /** A chunk of process output. */
+  chunk: string;
+  /** Which stream produced the chunk. */
+  stream: "stdout" | "stderr";
+  /** True when the process has exited. */
+  done: boolean;
+  /** Exit code, present only when done=true. */
+  exitCode?: number;
+};
 
 export type UndoRestoreMode = "conversation" | "code-and-conversation";
 
@@ -355,8 +370,10 @@ export type DesktopApi = {
   // ── CodeGraph index library ─────────────────────────────────────────────
   /** List every known workspace with its CodeGraph initialization state. */
   codegraphList(): Promise<CodegraphIndexEntry[]>;
-  /** Re-index a workspace: `init` when uninitialized, else incremental `index`. */
-  codegraphReindex(root: string): Promise<{ ok: boolean; action: "init" | "index"; error?: string }>;
+  /** Re-index a workspace: removes `.codegraph/` and runs a fresh `init`. */
+  codegraphReindex(root: string): Promise<{ ok: boolean; action: "reset"; error?: string }>;
+  /** Subscribe to streaming codegraph indexing output. Returns unsubscribe fn. */
+  onCodegraphProgress(cb: (event: CodegraphProgressEvent) => void): () => void;
 
   // ── MCP management (plugin module) ──────────────────────────────────────
   /** List all MCP servers (user + built-in) with enable/runtime state. */

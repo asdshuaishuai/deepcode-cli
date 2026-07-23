@@ -1123,7 +1123,7 @@ test("createSession appends default system prompts in prefix-cache-friendly orde
     .filter((message) => message.role === "system")
     .map((message) => message.content ?? "");
 
-  assert.equal(systemContents.length >= 4, true);
+  assert.equal(systemContents.length >= 5, true);
   assert.match(systemContents[0] ?? "", /# Available Tools/);
   assert.doesNotMatch(systemContents[0] ?? "", /# Local Workspace Environment/);
   assert.doesNotMatch(systemContents[0] ?? "", /当前LLM模型为test-model/);
@@ -1131,13 +1131,16 @@ test("createSession appends default system prompts in prefix-cache-friendly orde
   assert.match(systemContents[1] ?? "", /# Karpathy Guidelines/);
   assert.doesNotMatch(systemContents[1] ?? "", /path="templates\/skills\//);
   assert.doesNotMatch(systemContents[1] ?? "", /当前LLM模型为test-model/);
-  assert.match(systemContents[2] ?? "", /# Local Workspace Environment/);
-  assert.match(systemContents[2] ?? "", /当前LLM模型为test-model/);
-  const environmentJsonMatch = (systemContents[2] ?? "").match(/```json\n([\s\S]+?)\n```/);
+  // [2] = built-in plugin prompt (browser-skill)
+  assert.match(systemContents[2] ?? "", /<builtin-plugin/);
+  // [3] = runtime context
+  assert.match(systemContents[3] ?? "", /# Local Workspace Environment/);
+  assert.match(systemContents[3] ?? "", /当前LLM模型为test-model/);
+  const environmentJsonMatch = (systemContents[3] ?? "").match(/```json\n([\s\S]+?)\n```/);
   assert.ok(environmentJsonMatch);
   const environmentInfo = JSON.parse(environmentJsonMatch[1] ?? "{}") as { "root path"?: string };
   assert.equal(environmentInfo["root path"], workspace);
-  assert.equal(systemContents[3], "root project instructions");
+  assert.equal(systemContents[4], "root project instructions");
 });
 
 test("createSession skips disabled default skills", async () => {
@@ -1168,10 +1171,12 @@ test("createSession skips disabled default skills", async () => {
     .filter((message) => message.role === "system")
     .map((message) => message.content ?? "");
 
-  assert.equal(systemContents.length, 2);
+  // With karpathy-guidelines disabled: [0]=tools, [1]=builtin-plugin, [2]=runtime context
+  assert.equal(systemContents.length, 3);
   assert.match(systemContents[0] ?? "", /# Available Tools/);
   assert.doesNotMatch(systemContents.join("\n"), /<karpathy-guidelines-skill>/);
-  assert.match(systemContents[1] ?? "", /# Local Workspace Environment/);
+  assert.match(systemContents[1] ?? "", /<builtin-plugin/);
+  assert.match(systemContents[2] ?? "", /# Local Workspace Environment/);
 });
 
 test("createSession includes agent instructions in the skill matching system prompt", async () => {
@@ -3162,15 +3167,24 @@ test("SessionManager resets active tokens to latest post-compaction response usa
 
   const session = manager.getSession(sessionId);
   const usage = session?.usage as Record<string, any>;
+  // Compaction uses COMPACTION_MODEL ("deepseek-v4-flash"), so usagePerModel splits.
   const usagePerModel = session?.usagePerModel?.["test-model"] as Record<string, any>;
+  const compactUsage = session?.usagePerModel?.["deepseek-v4-flash"] as Record<string, any>;
   assert.equal(session?.activeTokens, 7);
+  // Total usage across all models.
   assert.equal(usage.prompt_tokens, 140_095);
   assert.equal(usage.completion_tokens, 35);
   assert.equal(usage.total_tokens, 140_130);
-  assert.equal(usagePerModel.prompt_tokens, 140_095);
-  assert.equal(usagePerModel.completion_tokens, 35);
-  assert.equal(usagePerModel.total_tokens, 140_130);
-  assert.equal(usagePerModel.total_reqs, 3);
+  // test-model: response 1 (139990+10) + response 3 (5+2)
+  assert.equal(usagePerModel.prompt_tokens, 139_995);
+  assert.equal(usagePerModel.completion_tokens, 12);
+  assert.equal(usagePerModel.total_tokens, 140_007);
+  assert.equal(usagePerModel.total_reqs, 2);
+  // deepseek-v4-flash: compaction response 2 (100+23)
+  assert.equal(compactUsage.prompt_tokens, 100);
+  assert.equal(compactUsage.completion_tokens, 23);
+  assert.equal(compactUsage.total_tokens, 123);
+  assert.equal(compactUsage.total_reqs, 1);
 });
 
 test("SessionManager streams chat completions and counts reasoning progress", async () => {
