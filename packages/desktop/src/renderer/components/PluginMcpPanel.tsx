@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
-import type { PluginMcpServer, SkillInfo } from "../../shared/ipc";
+import type { BuiltinPluginInfo, PluginMcpServer, SkillInfo } from "../../shared/ipc";
 import { api } from "../api";
 import { useI18n } from "../i18n";
 import { Button, Input, StatusDot, Switch } from "../ui/index";
@@ -14,7 +14,7 @@ type Props = {
   onSelect: (selection: PluginSelection) => void;
 };
 
-type Section = "mcp" | "skills";
+type Section = "mcp" | "skills" | "plugins";
 
 /** Curated stdio MCP servers. Clicking a preset only pre-fills the add form —
  *  the user still reviews the command and presses Add, so nothing auto-runs. */
@@ -41,6 +41,7 @@ export function PluginMcpPanel({
   const { t } = useI18n();
   const [section, setSection] = useState<Section>("mcp");
   const [servers, setServers] = useState<PluginMcpServer[]>([]);
+  const [builtinPlugins, setBuiltinPlugins] = useState<BuiltinPluginInfo[]>([]);
   const [adding, setAdding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [name, setName] = useState("");
@@ -54,6 +55,7 @@ export function PluginMcpPanel({
 
   useEffect(() => {
     void reload();
+    void api.pluginBuiltinList().then(setBuiltinPlugins);
     return api.onMcpStatusChanged(() => void reload());
   }, [reload]);
 
@@ -128,6 +130,9 @@ export function PluginMcpPanel({
         </button>
         <button className={`ui-tab${section === "skills" ? " active" : ""}`} onClick={() => setSection("skills")}>
           {t("plugins.skillsSection")}
+        </button>
+        <button className={`ui-tab${section === "plugins" ? " active" : ""}`} onClick={() => setSection("plugins")}>
+          {t("plugins.builtinSection")}
         </button>
       </div>
 
@@ -209,7 +214,7 @@ export function PluginMcpPanel({
               </>
             )}
           </>
-        ) : (
+        ) : section === "skills" ? (
           <>
             <div className="ui-skill-toolbar">
               <span className="ui-skill-toolbar-count">{skills.length}</span>
@@ -247,6 +252,33 @@ export function PluginMcpPanel({
               })
             )}
             <div className="ui-skill-hint">{t("plugins.skills.locations")}</div>
+          </>
+        ) : (
+          <>
+            {/* Orca built-in plugins — non-removable */}
+            {builtinPlugins.length === 0 ? (
+              <div className="ui-side-panel-empty">{t("plugins.builtin.none")}</div>
+            ) : (
+              builtinPlugins.map((plugin) => {
+                const isSel = selected?.kind === "plugin" && selected.name === plugin.name;
+                return (
+                  <div key={plugin.name} className={`ui-plugin-item${isSel ? " selected" : ""}`}>
+                    <button
+                      type="button"
+                      className="ui-plugin-item-main"
+                      onClick={() => onSelect({ kind: "plugin", name: plugin.name })}
+                    >
+                      <div className="ui-plugin-item-header">
+                        <span className="ui-plugin-item-name">{plugin.name}</span>
+                        <span className="ui-mcp-badge builtin">{t("plugins.builtin.badge")}</span>
+                      </div>
+                      {plugin.description ? <div className="ui-skill-desc">{plugin.description}</div> : null}
+                    </button>
+                  </div>
+                );
+              })
+            )}
+            <div className="ui-skill-hint">{t("plugins.builtin.hint")}</div>
           </>
         )}
       </div>

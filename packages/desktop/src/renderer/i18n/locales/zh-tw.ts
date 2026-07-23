@@ -158,6 +158,10 @@ export const zhTW: Record<MessageKey, string> = {
   "plugins.detail.noCapabilities": "未連接。啟用該伺服器後可發現其能力。",
   "plugins.detail.doc": "說明文件",
   "plugins.detail.docError": "無法讀取 SKILL.md。",
+  "plugins.builtinSection": "內置插件",
+  "plugins.builtin.badge": "內置",
+  "plugins.builtin.none": "暫無內置插件。",
+  "plugins.builtin.hint": "內置插件隨 Orca 一起發佈，不可卸載或禁用。",
   "context.compaction": "上下文",
 
   // ── Model modal ───────────────────────────────────────────

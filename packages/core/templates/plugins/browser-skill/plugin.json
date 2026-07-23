@@ -1,0 +1,10 @@
+{
+  "name": "browser-skill",
+  "version": "1.0.0",
+  "description": "Drive the user's real Chromium browser through the bsk CLI — visit pages, fill forms, scrape data, click through flows, regression-test UI.",
+  "category": "automation",
+  "author": "Tencent / BrowserSkill",
+  "homepage": "https://github.com/Tencent/BrowserSkill",
+  "builtin": true,
+  "removable": false
+}

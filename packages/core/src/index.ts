@@ -43,6 +43,7 @@ export type {
   UndoTarget,
   UserPromptContent,
   SkillInfo,
+  BuiltinPluginInfo,
   ModelUsage,
   SessionProcessEntry,
   BashTimeoutAdjustment,

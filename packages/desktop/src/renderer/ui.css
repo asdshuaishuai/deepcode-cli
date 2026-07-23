@@ -2756,6 +2756,10 @@ select {
   font-size: 10px;
   font-weight: 600;
 }
+.ui-mcp-badge.builtin {
+  background: var(--ui-success-soft, rgba(22, 163, 74, 0.12));
+  color: var(--ui-success, #16a34a);
+}
 .ui-mcp-row-cmd {
   font-size: 11px;
   color: var(--ui-text-faint);

@@ -56,6 +56,8 @@ const api: DesktopApi = {
   pluginUpsertMcpServer: (name, command, args, env) =>
     ipcRenderer.invoke(IpcRequest.PluginUpsertMcpServer, name, command, args, env),
   pluginRemoveMcpServer: (name) => ipcRenderer.invoke(IpcRequest.PluginRemoveMcpServer, name),
+  pluginBuiltinList: () => ipcRenderer.invoke(IpcRequest.PluginBuiltinList),
+  pluginBuiltinReadDoc: (name) => ipcRenderer.invoke(IpcRequest.PluginBuiltinReadDoc, name),
 
   // ── Events ────────────────────────────────────────────────────────────────
   onMcpStatusChanged: (cb) => subscribe(IpcEvent.McpStatusChanged, cb as (p: never) => void),

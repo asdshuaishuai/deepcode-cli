@@ -311,6 +311,26 @@ export type SkillInfo = {
   allowImplicitInvocation?: boolean;
 };
 
+/**
+ * Orca built-in plugin descriptor. Built-in plugins are a first-class extension
+ * type parallel to Skills and MCP servers. They ship inside the core package
+ * (`templates/plugins/<name>/`) and can never be uninstalled or disabled.
+ *
+ * Plugin directory layout:
+ *   templates/plugins/<name>/plugin.json   – manifest (name, version, category…)
+ *   templates/plugins/<name>/PLUGIN.md     – instruction document injected into prompts
+ */
+export type BuiltinPluginInfo = {
+  name: string;
+  version: string;
+  description: string;
+  category: string;
+  /** Built-in plugins are never removable. */
+  removable: false;
+  /** Display path, e.g. "builtin-plugin:browser-skill". */
+  path: string;
+};
+
 type SessionManagerOptions = {
   projectRoot: string;
   createOpenAIClient: CreateOpenAIClient;
@@ -942,6 +962,85 @@ ${agentInstructions}
     return fs.readFileSync(this.resolveSkillPath(skillPath), "utf8");
   }
 
+  // ── Orca Built-in Plugins ────────────────────────────────────────────────────
+
+  /** Root directory containing built-in plugin folders. */
+  private getBuiltinPluginsRoot(): string {
+    const extensionRoot = getExtensionRoot();
+    const sourceRoot = path.join(extensionRoot, "templates", "plugins");
+
+    // Source check keeps local development/tests on the checked-in templates.
+    if (fs.existsSync(path.join(extensionRoot, "src", "session.ts")) && fs.existsSync(sourceRoot)) {
+      return sourceRoot;
+    }
+
+    // In the published bundle, plugins are copied to dist/plugins/.
+    const distRoot = path.join(extensionRoot, "plugins");
+    return fs.existsSync(distRoot) ? distRoot : sourceRoot;
+  }
+
+  /**
+   * List all built-in plugins. These are first-class extensions that ship with
+   * the core package and can never be uninstalled or disabled.
+   */
+  listBuiltinPlugins(): BuiltinPluginInfo[] {
+    const root = this.getBuiltinPluginsRoot();
+    if (!fs.existsSync(root)) {
+      return [];
+    }
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(root, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+
+    const plugins: BuiltinPluginInfo[] = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) {
+        continue;
+      }
+      const manifestPath = path.join(root, entry.name, "plugin.json");
+      try {
+        if (!fs.existsSync(manifestPath)) {
+          continue;
+        }
+        const raw = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+        plugins.push({
+          name: typeof raw.name === "string" ? raw.name : entry.name,
+          version: typeof raw.version === "string" ? raw.version : "1.0.0",
+          description: typeof raw.description === "string" ? raw.description : "",
+          category: typeof raw.category === "string" ? raw.category : "general",
+          removable: false,
+          path: `builtin-plugin:${entry.name}`,
+        });
+      } catch {
+        continue;
+      }
+    }
+    return plugins.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Read the PLUGIN.md instruction document for a built-in plugin by its name.
+   * Used by the desktop plugin detail pane and by prompt injection.
+   */
+  readBuiltinPluginDoc(pluginName: string): string {
+    const root = this.getBuiltinPluginsRoot();
+    const docPath = path.join(root, pluginName, "PLUGIN.md");
+    const resolvedPath = path.resolve(docPath);
+    const resolvedRoot = path.resolve(root);
+    // Traversal guard
+    if (!resolvedPath.startsWith(`${resolvedRoot}${path.sep}`)) {
+      return "";
+    }
+    try {
+      return fs.readFileSync(resolvedPath, "utf8");
+    } catch {
+      return "";
+    }
+  }
+
   private resolveSkillPath(skillPath: string): string {
     if (skillPath.startsWith("bundled:")) {
       const relativePath = skillPath.slice("bundled:".length);
@@ -981,6 +1080,49 @@ ${agentInstructions}
         skillFilePath: skillPath,
       },
     ]);
+  }
+
+  /**
+   * Build the combined prompt from all built-in plugins' PLUGIN.md documents.
+   * Returns empty string when no plugins are available.
+   */
+  private getBuiltinPluginPrompt(): string {
+    const root = this.getBuiltinPluginsRoot();
+    if (!fs.existsSync(root)) {
+      return "";
+    }
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(root, { withFileTypes: true });
+    } catch {
+      return "";
+    }
+
+    const blocks: string[] = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) {
+        continue;
+      }
+      const docPath = path.join(root, entry.name, "PLUGIN.md");
+      try {
+        if (!fs.existsSync(docPath)) {
+          continue;
+        }
+        const content = fs.readFileSync(docPath, "utf8").trim();
+        if (content) {
+          blocks.push(`<builtin-plugin name="${entry.name}">
+${content}
+</builtin-plugin>`);
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (blocks.length === 0) {
+      return "";
+    }
+    return `The following built-in plugins are always available. Use them when the task matches their capabilities:\n${blocks.join("\n\n")}`;
   }
 
   private readSkillInfo(skillPath: string, displayPath: string, fallbackName: string): SkillInfo {
@@ -1194,6 +1336,13 @@ ${agentInstructions}
     if (defaultSkillPrompt) {
       const defaultSkillMessage = this.buildSystemMessage(sessionId, defaultSkillPrompt);
       this.appendSessionMessage(sessionId, defaultSkillMessage);
+    }
+
+    // Orca built-in plugins: always inject their instruction docs into the session.
+    const builtinPluginPrompt = this.getBuiltinPluginPrompt();
+    if (builtinPluginPrompt) {
+      const pluginMessage = this.buildSystemMessage(sessionId, builtinPluginPrompt);
+      this.appendSessionMessage(sessionId, pluginMessage);
     }
 
     const runtimeContextMessage = this.buildSystemMessage(

@@ -157,6 +157,10 @@ export const ko: Record<MessageKey, string> = {
   "plugins.detail.noCapabilities": "연결되지 않았습니다. 서버를 활성화하면 기능을 확인할 수 있습니다.",
   "plugins.detail.doc": "문서",
   "plugins.detail.docError": "SKILL.md를 읽을 수 없습니다.",
+  "plugins.builtinSection": "내장 플러그인",
+  "plugins.builtin.badge": "내장",
+  "plugins.builtin.none": "내장 플러그인이 없습니다.",
+  "plugins.builtin.hint": "내장 플러그인은 Orca와 함께 제공되며 제거하거나 비활성화할 수 없습니다.",
   "context.compaction": "컨텍스트",
 
   // ── Model modal ───────────────────────────────────────────

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
-import type { PluginMcpServer, SkillInfo } from "../../shared/ipc";
+import type { BuiltinPluginInfo, PluginMcpServer, SkillInfo } from "../../shared/ipc";
 import { api } from "../api";
 import { useI18n } from "../i18n";
 import { renderMarkdown } from "../markdown";
 import { Button, StatusDot, Switch } from "../ui/index";
 
 /** Which plugin the workspace detail pane is showing. */
-export type PluginSelection = { kind: "mcp" | "skill"; name: string };
+export type PluginSelection = { kind: "mcp" | "skill" | "plugin"; name: string };
 
 type Props = {
   selection: PluginSelection | null;
@@ -186,6 +186,11 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill,
     );
   }
 
+  // ── Built-in plugin detail ─────────────────────────────────────────────────
+  if (selection.kind === "plugin") {
+    return <BuiltinPluginDetail name={selection.name} />;
+  }
+
   const server = servers.find((s) => s.name === selection.name) ?? null;
   if (!server) {
     return (
@@ -317,6 +322,56 @@ export function PluginDetail({ selection, skills, selectedSkills, onToggleSkill,
           </div>
         ) : (
           <div className="ui-plugin-detail-empty">{t("plugins.detail.noCapabilities")}</div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/** Detail pane for an Orca built-in plugin (non-removable). */
+function BuiltinPluginDetail({ name }: { name: string }): JSX.Element {
+  const { t } = useI18n();
+  const [info, setInfo] = useState<BuiltinPluginInfo | null>(null);
+  const [doc, setDoc] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.pluginBuiltinList().then((list) => {
+      if (!cancelled) setInfo(list.find((p) => p.name === name) ?? null);
+    });
+    void api.pluginBuiltinReadDoc(name).then((md) => {
+      if (!cancelled) setDoc(md);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [name]);
+
+  return (
+    <div className="ui-plugin-detail">
+      <header className="ui-plugin-detail-head">
+        <div className="ui-plugin-detail-title">
+          <span className="ui-plugin-detail-name">{name}</span>
+          <span className="ui-mcp-badge builtin">{t("plugins.builtin.badge")}</span>
+        </div>
+      </header>
+
+      {info?.description ? <p className="ui-plugin-detail-lead">{info.description}</p> : null}
+
+      <section className="ui-plugin-detail-section">
+        <h3>{t("plugins.detail.source")}</h3>
+        <dl className="ui-plugin-meta">
+          <dt>{t("plugins.builtin.badge")}</dt>
+          <dd className="ui-plugin-mono">{info ? `v${info.version} · ${info.category}` : ""}</dd>
+        </dl>
+      </section>
+
+      <section className="ui-plugin-detail-section">
+        <h3>{t("plugins.detail.doc")}</h3>
+        {doc ? (
+          <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(doc) }} />
+        ) : (
+          <div className="ui-plugin-detail-empty">{t("plugins.detail.docError")}</div>
         )}
       </section>
     </div>

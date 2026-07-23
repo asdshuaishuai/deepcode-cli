@@ -2,6 +2,7 @@
 // Kept dependency-free (type-only imports) so it can be bundled into both sides.
 
 import type {
+  BuiltinPluginInfo,
   ModelConfigSelection,
   ModelUsage,
   PermissionDefaultMode,
@@ -61,6 +62,8 @@ export const IpcRequest = {
   PluginReadSkillDoc: "plugin:readSkillDoc",
   PluginUpsertMcpServer: "plugin:upsertMcpServer",
   PluginRemoveMcpServer: "plugin:removeMcpServer",
+  PluginBuiltinList: "plugin:builtinList",
+  PluginBuiltinReadDoc: "plugin:builtinReadDoc",
 
   /** Scan workspace files for @file mentions */
   ScanFiles: "app:scanFiles",
@@ -305,6 +308,10 @@ export type DesktopApi = {
   pluginUpsertMcpServer(name: string, command: string, args?: string[], env?: Record<string, string>): Promise<void>;
   /** Remove an MCP server. */
   pluginRemoveMcpServer(name: string): Promise<void>;
+  /** List all built-in plugins (non-removable). */
+  pluginBuiltinList(): Promise<BuiltinPluginInfo[]>;
+  /** Read a built-in plugin's PLUGIN.md document by name. */
+  pluginBuiltinReadDoc(name: string): Promise<string>;
 
   // ── Events ────────────────────────────────────────────────────────────────
   onAssistantMessage(cb: (message: SessionMessage) => void): () => void;
@@ -367,6 +374,7 @@ export type PluginEventPayload =
 
 export type {
   AskPermissionRequest,
+  BuiltinPluginInfo,
   McpServerStatus,
   ModelConfigSelection,
   PermissionDefaultMode,

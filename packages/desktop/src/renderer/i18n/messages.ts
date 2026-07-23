@@ -163,6 +163,9 @@ export const en = {
   "plugins.detail.noCapabilities": "Not connected. Enable the server to discover its capabilities.",
   "plugins.detail.doc": "Documentation",
   "plugins.detail.docError": "Could not read SKILL.md.",
+  "plugins.builtin.badge": "Built-in",
+  "plugins.builtin.none": "No built-in plugins available.",
+  "plugins.builtin.hint": "Built-in plugins ship with Orca and cannot be uninstalled or disabled.",
   "context.compaction": "Context",
 
   // ── Model modal ───────────────────────────────────────────
@@ -377,6 +380,7 @@ export const en = {
   "tokens.overall": "All workspaces",
   "plugins.mcpSection": "MCP Servers",
   "plugins.skillsSection": "Skills",
+  "plugins.builtinSection": "Plugins",
   "composer.targetMode": "Target mode",
   "composer.targetModeHint": "Target mode is not available yet (backend CLI pending).",
   "composer.builtinCommands": "Built-in commands",
@@ -570,6 +574,10 @@ export const zh: Record<MessageKey, string> = {
   "plugins.detail.noCapabilities": "未连接。启用该服务器后可发现其能力。",
   "plugins.detail.doc": "说明文档",
   "plugins.detail.docError": "无法读取 SKILL.md。",
+  "plugins.builtinSection": "内置插件",
+  "plugins.builtin.badge": "内置",
+  "plugins.builtin.none": "暂无内置插件。",
+  "plugins.builtin.hint": "内置插件随 Orca 一起发布，不可卸载或禁用。",
   "context.compaction": "上下文",
 
   // ── Model modal ───────────────────────────────────────────

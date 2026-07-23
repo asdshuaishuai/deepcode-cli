@@ -157,6 +157,10 @@ export const ja: Record<MessageKey, string> = {
   "plugins.detail.noCapabilities": "未接続です。サーバーを有効にすると機能を検出できます。",
   "plugins.detail.doc": "ドキュメント",
   "plugins.detail.docError": "SKILL.md を読み込めませんでした。",
+  "plugins.builtinSection": "内蔵プラグイン",
+  "plugins.builtin.badge": "内蔵",
+  "plugins.builtin.none": "内蔵プラグインはありません。",
+  "plugins.builtin.hint": "内蔵プラグインは Orca に同梱されており、アンインストールや無効化はできません。",
   "context.compaction": "コンテキスト",
 
   // ── Model modal ───────────────────────────────────────────

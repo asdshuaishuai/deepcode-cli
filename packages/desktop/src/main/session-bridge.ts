@@ -662,4 +662,16 @@ export class SessionBridge {
     this.reload();
     this.emit(IpcEvent.McpStatusChanged);
   }
+
+  // ── Orca Built-in Plugins ─────────────────────────────────────────────────
+
+  /** List all built-in plugins (non-removable, always available). */
+  pluginBuiltinList() {
+    return this.manager.listBuiltinPlugins();
+  }
+
+  /** Read a built-in plugin's PLUGIN.md instruction document by name. */
+  pluginBuiltinReadDoc(name: string): string {
+    return this.manager.readBuiltinPluginDoc(name);
+  }
 }

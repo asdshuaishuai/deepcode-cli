@@ -226,6 +226,8 @@ function registerIpc(): void {
       getBridge().pluginUpsertMcpServer(name, command, args, env)
   );
   handle(IpcRequest.PluginRemoveMcpServer, (name: string) => getBridge().pluginRemoveMcpServer(name));
+  handle(IpcRequest.PluginBuiltinList, () => getBridge().pluginBuiltinList());
+  handle(IpcRequest.PluginBuiltinReadDoc, (name: string) => getBridge().pluginBuiltinReadDoc(name));
 
   // ── File scanner (for @file mentions) ────────────────────────────────────
   handle(IpcRequest.ScanFiles, (query: string) => {
