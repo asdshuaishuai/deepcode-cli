@@ -10,7 +10,7 @@
 
 import { build, context } from "esbuild";
 import { execFileSync } from "node:child_process";
-import { cp, mkdir } from "node:fs/promises";
+import { cp, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,6 +83,33 @@ function ensureCodegraphVendored() {
   }
 }
 
+// Ensure @vegamo/deepcode-core is freshly built before bundling.
+// The desktop main bundle keeps core `external` (resolved from node_modules at
+// runtime), so a stale core/dist/ (e.g. after a `git pull` that changed core
+// source but not its gitignored dist) makes Electron fail to import new
+// exports. Rebuild core + rewrite ESM imports so dist/ always matches src.
+//
+// Core uses `composite: true` (incremental builds via .tsbuildinfo). When only
+// dist/ is removed (or source changed after a pull), a stale buildinfo can make
+// `tsc` think nothing needs emitting. We delete the buildinfo first so the next
+// `tsc -p` does a full emit, then rewrite ESM imports to add ".js" extensions.
+async function ensureCoreBuilt() {
+  const root = resolve(__dirname, "..", "..");
+  const corePkg = resolve(root, "packages", "core");
+  const buildinfo = resolve(corePkg, "tsconfig.tsbuildinfo");
+  const rewriteScript = resolve(root, "scripts", "rewrite-esm-imports.js");
+  if (existsSync(buildinfo)) {
+    await rm(buildinfo, { force: true });
+  }
+  console.log("[desktop] building @vegamo/deepcode-core …");
+  execFileSync("npm", ["run", "build", "--workspace=@vegamo/deepcode-core"], {
+    stdio: "inherit",
+    cwd: root,
+    shell: true,
+  });
+  execFileSync(process.execPath, [rewriteScript], { stdio: "inherit", cwd: root });
+}
+
 async function copyStaticAssets() {
   await mkdir(resolve(outdir, "renderer"), { recursive: true });
   await cp(resolve(__dirname, "src/renderer/index.html"), resolve(outdir, "renderer/index.html"));
@@ -106,6 +133,7 @@ async function copyStaticAssets() {
 }
 
 async function run() {
+  await ensureCoreBuilt();
   ensureCodegraphVendored();
   if (isDev) {
     const contexts = await Promise.all([context(mainConfig), context(preloadConfig), context(rendererConfig)]);
