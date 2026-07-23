@@ -400,12 +400,51 @@ select {
 .ui-conversation {
   flex: 1;
   overflow-y: auto;
+  position: relative;
   /* Bottom padding is set dynamically to the composer-dock height (plus a
      small breathing gap) by App.tsx via a ResizeObserver, so the last
      message never sits underneath the floating composer. The 220px fallback
      is enough for the typical composer (toolbar + textarea + dock padding)
      before the observer has had a chance to run on first paint. */
   padding: var(--ui-space-5) var(--ui-space-4) var(--ui-composer-reserved, 220px);
+  /* Virtual padding for scrollIntoView so the snap-to-bottom leaves a
+     visual gap above the composer instead of pinning the last line to
+     the very edge. Combined with the ResizeObserver-driven padding
+     above, this is what keeps new content from being covered. */
+  scroll-padding-bottom: 80px;
+}
+
+/* Floating "Jump to latest" pill — appears when the user has scrolled
+   up and the stream is producing new content below the fold. The pill
+   sits just above the composer so the eye finds it where the new
+   content is actually appearing. */
+.ui-jump-to-latest {
+  position: absolute;
+  right: var(--ui-space-4);
+  bottom: calc(var(--ui-composer-reserved, 220px) - 56px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-surface-raised);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border-soft);
+  box-shadow: var(--ui-shadow-card);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  z-index: 5;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.ui-jump-to-latest:hover {
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+  transform: translateY(-1px);
+}
+.ui-jump-to-latest-arrow {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .ui-conversation-inner {

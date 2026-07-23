@@ -97,6 +97,7 @@ export const en = {
   "msg.result": "Result",
   "msg.loadedSkill": "Loaded skill: {name}",
   "msg.summaryInserted": "(conversation summary inserted)",
+  "msg.jumpToLatest": "Jump to latest",
 
   // ── Permission card ───────────────────────────────────────
   "perm.required": "Permission required",
@@ -508,6 +509,7 @@ export const zh: Record<MessageKey, string> = {
   "msg.result": "结果",
   "msg.loadedSkill": "已加载技能：{name}",
   "msg.summaryInserted": "（已插入对话摘要）",
+  "msg.jumpToLatest": "跳到最新",
 
   // ── Permission card ───────────────────────────────────────
   "perm.required": "需要授权",

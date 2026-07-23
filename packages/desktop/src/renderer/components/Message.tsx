@@ -17,22 +17,154 @@ function Md({ text }: { text: string }): JSX.Element {
   return <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
 }
 
-/** Map tool name → icon + CSS modifier for visual differentiation. */
-function toolVisual(name: string): { icon: string; cls: string } {
+/** Map tool name → CSS modifier for visual differentiation. */
+function toolCls(name: string): string {
   const n = name.toLowerCase();
-  if (n === "bash") return { icon: "$", cls: "bash" };
-  if (n === "read") return { icon: "📖", cls: "read" };
-  if (n === "write") return { icon: "📝", cls: "write" };
-  if (n === "edit") return { icon: "✏️", cls: "edit" };
-  if (n === "askuserquestion") return { icon: "❓", cls: "ask" };
-  if (n === "updateplan") return { icon: "📋", cls: "plan" };
-  if (n === "websearch") return { icon: "🔍", cls: "search" };
-  if (n.startsWith("mcp__")) return { icon: "🔌", cls: "mcp" };
-  return { icon: "⚙", cls: "generic" };
+  if (n === "bash") return "bash";
+  if (n === "read") return "read";
+  if (n === "write") return "write";
+  if (n === "edit") return "edit";
+  if (n === "askuserquestion") return "ask";
+  if (n === "updateplan") return "plan";
+  if (n === "websearch") return "search";
+  if (n.startsWith("mcp__")) return "mcp";
+  return "generic";
+}
+
+/**
+ * Per-tool-type icon. SVG for the families that benefit from a sharp,
+ * theme-tinted glyph (bash terminal, read/edit file), emoji for the rest
+ * — keeps the bundle small and the distinction clear at a glance.
+ */
+function toolIcon(name: string): JSX.Element {
+  const n = name.toLowerCase();
+  if (n === "bash") return <BashTerminalIcon />;
+  if (n === "read") return <span aria-hidden="true">📖</span>;
+  if (n === "write") return <span aria-hidden="true">📝</span>;
+  if (n === "edit") return <span aria-hidden="true">✏️</span>;
+  if (n === "askuserquestion") return <span aria-hidden="true">❓</span>;
+  if (n === "updateplan") return <span aria-hidden="true">📋</span>;
+  if (n === "websearch") return <span aria-hidden="true">🔍</span>;
+  if (n.startsWith("mcp__")) return <span aria-hidden="true">🔌</span>;
+  return <span aria-hidden="true">⚙</span>;
+}
+
+/** Inline-SVG terminal glyph: a window with a chevron prompt and a cursor. */
+function BashTerminalIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M4 6.5 L6 8 L4 9.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <line x1="7" y1="9.5" x2="10.5" y2="9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max)}…`;
+}
+
+/**
+ * Smart preview text for the collapsed result toggle. For bash we surface
+ * the exit code + a one-liner of stdout (much more informative than a
+ * truncated JSON blob), and for everything else we fall back to the first
+ * non-empty line of the result. Strips markdown code fences that the
+ * `wrapPlainStructured` pass in messages.ts may have added, so the user
+ * sees "exit 0" instead of "```json\n{...".
+ */
+function ResultHint({
+  toolName,
+  metadata,
+  resultMd,
+}: {
+  toolName: string;
+  metadata: Record<string, unknown> | null;
+  resultMd: string;
+}): JSX.Element {
+  const cleaned = stripCodeFence(resultMd).trim();
+  if (toolName.toLowerCase() === "bash") {
+    const exitCode = typeof metadata?.["exitCode"] === "number" ? (metadata["exitCode"] as number) : null;
+    const signal = typeof metadata?.["signal"] === "string" ? (metadata["signal"] as string) : null;
+    const firstLine = firstNonEmptyLine(cleaned);
+    const summary = signal != null ? `signal ${signal}` : exitCode != null ? `exit ${exitCode}` : firstLine || "ok";
+    return <span className="ui-tool-result-hint"> ({summary})</span>;
+  }
+  const preview = firstNonEmptyLine(cleaned);
+  if (!preview) return <></>;
+  return <span className="ui-tool-result-hint"> ({truncate(preview, 60)})</span>;
+}
+
+function stripCodeFence(text: string): string {
+  return text
+    .replace(/^```[a-zA-Z0-9]*\n/, "")
+    .replace(/\n```\s*$/, "")
+    .trim();
+}
+
+function firstNonEmptyLine(text: string): string {
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim().replace(/\s+/g, " ");
+    if (trimmed) return trimmed;
+  }
+  return "";
+}
+
+/**
+ * Result renderer for tool cards. The Read tool's output arrives with
+ * line-number prefixes (e.g. "     1\t# AGENTS.md") so the agent can
+ * cite lines. For .md / .html we strip those prefixes and render the
+ * file as it was meant to be read; for code files we keep the
+ * line-numbered view because the prefixes are the whole point.
+ */
+function ToolResult({
+  toolName,
+  params,
+  resultMd,
+}: {
+  toolName: string;
+  params: string;
+  resultMd: string;
+}): JSX.Element {
+  const ext = fileExtensionFromParams(toolName, params);
+  if (toolName.toLowerCase() === "read" && (ext === "md" || ext === "markdown")) {
+    return <Md text={stripReadLineNumbers(resultMd)} />;
+  }
+  if (toolName.toLowerCase() === "read" && (ext === "html" || ext === "htm")) {
+    // HTML is rendered as HTML (CSP blocks inline scripts); the line
+    // numbers in the output would otherwise leak into the markup.
+    return <Md text={stripReadLineNumbers(resultMd)} />;
+  }
+  return <Md text={resultMd} />;
+}
+
+function fileExtensionFromParams(toolName: string, params: string): string {
+  if (!["read", "write", "edit"].includes(toolName.toLowerCase())) return "";
+  // The params string starts with the file path (e.g. `"./AGENTS.md"` or
+  // `D:\path\to\file.ts`). Strip surrounding quotes/whitespace, then
+  // take the part after the last dot.
+  const cleaned = params.replace(/^['"`\s]+|['"`\s]+$/g, "").split(/\s+/)[0] ?? "";
+  const match = cleaned.match(/\.([a-zA-Z0-9]+)$/);
+  return match ? match[1]!.toLowerCase() : "";
+}
+
+/**
+ * Strip the "     N\t" prefix that the core Read handler prepends to
+ * every line (see formatWithLineNumbers in read-handler.ts). Lines that
+ * don't match the prefix are returned as-is so non-numbered text
+ * (e.g. a "WARNING: File is empty." notice) survives intact.
+ */
+function stripReadLineNumbers(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*\d+\t/, ""))
+    .join("\n");
 }
 
 // ── User bubble (QQ-style: right-aligned) ─────────────────────────────────────
@@ -63,28 +195,29 @@ function ThinkingBlock({
 }): JSX.Element | null {
   const { t } = useI18n();
   const summary = buildThinkingSummary(content, messageParams);
-  // Auto-expand the latest thinking block; older ones auto-collapse.
-  const [expanded, setExpanded] = useState(reasoningMode === "expanded" || isLatest);
+  // Reasoning is shown expanded by default — the user wants to see the
+  // model's working, not just a one-line summary. reasoningMode === "hidden"
+  // suppresses the block entirely; otherwise the block is visible and the
+  // user can collapse it manually if they want a quieter view.
+  const [expanded, setExpanded] = useState(reasoningMode !== "hidden");
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Sync when a newer thinking block arrives (isLatest changes).
+  // Respect the global reasoningMode toggle (e.g. /raw cycles between
+  // normal → expanded → hidden) without dragging the local collapse state
+  // around when the latest message changes.
   useEffect(() => {
-    if (isLatest && reasoningMode !== "hidden") {
-      setExpanded(true);
-    } else if (!isLatest) {
-      setExpanded(false);
-    }
-  }, [isLatest, reasoningMode]);
+    setExpanded(reasoningMode !== "hidden");
+  }, [reasoningMode]);
 
-  // When the user expands an older thinking block (or it auto-expands on a
-  // new message), scroll the top of the body into view. block: "nearest"
-  // avoids hijacking scroll position when the body is already fully on
-  // screen, so this is a non-intrusive nudge rather than a forced jump.
+  // When the user expands an older thinking block, scroll the top of the
+  // body into view. block: "nearest" avoids hijacking scroll position
+  // when the body is already fully on screen, so this is a non-intrusive
+  // nudge rather than a forced jump.
   useEffect(() => {
-    if (expanded && bodyRef.current) {
+    if (expanded && bodyRef.current && !isLatest) {
       bodyRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [expanded]);
+  }, [expanded, isLatest]);
 
   if (reasoningMode === "hidden") return null;
 
@@ -132,7 +265,7 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
   const resultMd = getResultMd(message);
   const diffLines = getDiffLines(summary);
   const planLines = getPlanLines(summary);
-  const vis = toolVisual(summary.name);
+  const toolClass = toolCls(summary.name);
   const isMcp = summary.name.toLowerCase().startsWith("mcp__");
   const displayName = isMcp ? summary.name.replace(/^mcp__/, "").replace(/__/g, " · ") : formatStatusName(summary.name);
   const isFileTool = FILE_TOOLS.has(summary.name.toLowerCase());
@@ -144,7 +277,7 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
   // the header is just visual metadata.
   const headerInner = (
     <>
-      <span className="ui-tool-icon">{vis.icon}</span>
+      <span className="ui-tool-icon">{toolIcon(summary.name)}</span>
       <span className="ui-tool-name">{displayName}</span>
       {/* File tools surface the file path inline so the user can identify
          which file they're looking at without expanding the card. */}
@@ -156,7 +289,7 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
 
   return (
     <div
-      className={`ui-tool-card ${vis.cls}${summary.ok ? "" : " err"}${isFileTool ? " collapsible" : ""}${isFileTool && bodyOpen ? " open" : ""}`}
+      className={`ui-tool-card ${toolClass}${summary.ok ? "" : " err"}${isFileTool ? " collapsible" : ""}${isFileTool && bodyOpen ? " open" : ""}`}
     >
       {isFileTool ? (
         <button type="button" className="ui-tool-head" onClick={() => setBodyOpen((v) => !v)}>
@@ -195,12 +328,12 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
                 <span>{resultOpen ? "▾" : "▸"}</span>
                 <span>{t("msg.result")}</span>
                 {!resultOpen ? (
-                  <span className="ui-tool-result-hint"> ({truncate(resultMd.replace(/\s+/g, " "), 60)})</span>
+                  <ResultHint toolName={summary.name} metadata={summary.metadata} resultMd={resultMd} />
                 ) : null}
               </button>
               {resultOpen ? (
                 <div className="ui-tool-result">
-                  <Md text={resultMd} />
+                  <ToolResult toolName={summary.name} params={params} resultMd={resultMd} />
                 </div>
               ) : null}
             </div>

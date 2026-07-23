@@ -91,6 +91,7 @@ export const ko: Record<MessageKey, string> = {
   "msg.result": "결과",
   "msg.loadedSkill": "스킬 로드됨: {name}",
   "msg.summaryInserted": "(대화 요약이 삽입됨)",
+  "msg.jumpToLatest": "최신 메시지로 이동",
 
   // ── Permission card ───────────────────────────────────────
   "perm.required": "권한이 필요합니다",

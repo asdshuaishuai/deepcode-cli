@@ -91,6 +91,7 @@ export const ja: Record<MessageKey, string> = {
   "msg.result": "結果",
   "msg.loadedSkill": "スキルを読み込みました：{name}",
   "msg.summaryInserted": "（会話の要約を挿入しました）",
+  "msg.jumpToLatest": "最新のメッセージへ",
 
   // ── Permission card ───────────────────────────────────────
   "perm.required": "許可が必要です",

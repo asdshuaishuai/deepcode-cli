@@ -92,6 +92,7 @@ export const zhTW: Record<MessageKey, string> = {
   "msg.result": "結果",
   "msg.loadedSkill": "已載入技能：{name}",
   "msg.summaryInserted": "（已插入對話摘要）",
+  "msg.jumpToLatest": "跳到最新",
 
   // ── Permission card ───────────────────────────────────────
   "perm.required": "需要授權",
