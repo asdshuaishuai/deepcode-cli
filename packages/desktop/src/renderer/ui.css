@@ -337,6 +337,16 @@ select {
   border-radius: 50%;
   border: none;
   padding: 0;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  position: relative;
+  transition: filter 0.15s;
+}
+/* Enlarged invisible hit-area so the 12px dot is easy to click. */
+.ui-gumdrop::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 
 .ui-gumdrop.close {
@@ -347,6 +357,15 @@ select {
 }
 .ui-gumdrop.zoom {
   background: #28c840;
+}
+.ui-gumdrop.close:hover {
+  filter: brightness(1.15);
+}
+.ui-gumdrop.min:hover {
+  filter: brightness(1.15);
+}
+.ui-gumdrop.zoom:hover {
+  filter: brightness(1.15);
 }
 
 .ui-win-ctrl {
