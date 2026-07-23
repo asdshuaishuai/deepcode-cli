@@ -21,12 +21,13 @@
   --fusion-warning: #f0a30a; /* 橙 */
   --fusion-danger: #e81123; /* 红 */
   --fusion-magenta: #e3008c; /* 品红(tokens 徽章) */
-  /* 玻璃材质:半透明底 + 高饱和模糊。透在页面多色径向背景上才"看得见"。 */
-  --fusion-glass: rgba(43, 45, 52, 0.45);
+  /* 玻璃材质:毛玻璃/拟态玻璃 — 底色足够实(保证内容可读),靠 backdrop-filter
+     模糊体现玻璃感,而非靠透明度透出底层。彩色只作为极淡的色染叠加。 */
+  --fusion-glass: rgba(34, 36, 42, 0.82);
   --fusion-glass-raised: rgba(255, 255, 255, 0.08);
   --fusion-glass-border: rgba(255, 255, 255, 0.14);
   --fusion-glass-highlight: rgba(255, 255, 255, 0.16); /* 玻璃顶部受光高光 */
-  --fusion-acrylic: rgba(22, 22, 24, 0.72);
+  --fusion-acrylic: rgba(22, 22, 24, 0.85);
   --fusion-sans:
     "Segoe UI", "Segoe UI Variable", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Microsoft YaHei", Helvetica,
     Arial, sans-serif;
@@ -77,8 +78,7 @@ body {
   background:
     radial-gradient(circle at 15% 20%, rgba(0, 153, 188, 0.1), transparent 40%),
     radial-gradient(circle at 85% 75%, rgba(123, 97, 255, 0.1), transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(227, 0, 140, 0.06), transparent 50%),
-    var(--fusion-bg);
+    radial-gradient(circle at 50% 50%, rgba(227, 0, 140, 0.06), transparent 50%), var(--fusion-bg);
   background-attachment: fixed;
 }
 
@@ -86,8 +86,8 @@ body {
    浅色下玻璃改为白色半透明;accent 多彩色保持不变,多彩感在浅色也要体现。 */
 :root[data-appearance="light"] {
   --fusion-bg: #f3f3f3;
-  --fusion-acrylic: rgba(243, 243, 243, 0.78);
-  --fusion-glass: rgba(255, 255, 255, 0.6);
+  --fusion-acrylic: rgba(243, 243, 243, 0.85);
+  --fusion-glass: rgba(252, 252, 252, 0.85);
   --fusion-glass-raised: rgba(0, 0, 0, 0.04);
   --fusion-glass-border: rgba(0, 0, 0, 0.12);
   --fusion-glass-highlight: rgba(255, 255, 255, 0.7);
@@ -111,20 +111,23 @@ body {
 
    卡片玻璃在 蓝→青→紫 间 8s 流转,不同元素错峰 delay,此起彼伏。
    外发光(辉光)同步呼吸——色浓时增强。这是 Win11 Mica "材质会响应"的感觉。
+
+   重要:这是"毛玻璃"不是"真透明"。底色保持高不透明度(0.82,内容可读),
+   彩色只作为极淡的色染叠加在实底之上,靠 backdrop-filter 模糊体现玻璃感。
    全部包裹在 prefers-reduced-motion: no-preference 内,尊重无障碍。
    =========================================================================== */
 @keyframes fusion-glass-hue {
   0% {
-    background-color: rgba(31, 111, 199, 0.1);
+    background-color: rgba(34, 40, 56, 0.82);
   }
   33% {
-    background-color: rgba(0, 153, 188, 0.12);
+    background-color: rgba(30, 44, 52, 0.82);
   }
   66% {
-    background-color: rgba(123, 97, 255, 0.11);
+    background-color: rgba(40, 36, 58, 0.82);
   }
   100% {
-    background-color: rgba(31, 111, 199, 0.1);
+    background-color: rgba(34, 40, 56, 0.82);
   }
 }
 @keyframes fusion-glass-glow {
@@ -203,7 +206,9 @@ body {
 /* ===========================================================================
    玻璃卡片 — 消息气泡 / 工具卡 / 模态
 
-   半透明 + 边缘高光 + 底部内阴影,透出底层多色径向背景 = 玻璃质感。
+   毛玻璃:实底(0.82,内容可读) + backdrop-filter 模糊 + 边缘高光 + 底部内阴影。
+   消息内容区用静态实底(不参与呼吸动画),避免阅读时闪烁;呼吸色仅用于
+   框架元素(TopBar/rail/输入框)以保持"活着"的感觉而不干扰内容。
    =========================================================================== */
 .ui-bubble.assistant,
 .ui-bubble.thinking,
@@ -226,12 +231,7 @@ body {
 /* 用户消息 — 多彩磁贴(主蓝),带受光高光 + 外投影 */
 .ui-bubble.user {
   background:
-    linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.22) 0%,
-      rgba(255, 255, 255, 0.04) 48%,
-      rgba(0, 0, 0, 0.16) 100%
-    ),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 48%, rgba(0, 0, 0, 0.16) 100%),
     var(--fusion-primary);
   color: #fff;
   border: none;
@@ -294,9 +294,7 @@ body {
 }
 /* 思考模式徽章 — 紫色磁贴(Win11 Fluent 标志色) */
 .ui-topbar-thinking {
-  background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)),
-    var(--fusion-accent);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)), var(--fusion-accent);
   color: #fff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
@@ -304,9 +302,7 @@ body {
 }
 /* token 徽章 — 青色磁贴 */
 .ui-topbar-tokens {
-  background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)),
-    var(--fusion-info);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)), var(--fusion-info);
   color: #fff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
@@ -314,9 +310,7 @@ body {
 }
 /* 模型徽章 — 主蓝磁贴 */
 .ui-topbar-model {
-  background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)),
-    var(--fusion-primary);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03)), var(--fusion-primary);
   color: #fff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
@@ -403,11 +397,7 @@ body {
 /* 图标按钮(rail) — 方块磁贴,激活态用彩色 */
 .ui-rail-btn,
 .ui-icon-btn {
-  background-image: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     0 2px 6px rgba(0, 0, 0, 0.3);
@@ -429,9 +419,7 @@ body {
 }
 /* rail 激活态 — 紫色磁贴(Win11 Fluent 标志色点亮) */
 .ui-rail-btn--active {
-  background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.05)),
-    var(--fusion-accent);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.05)), var(--fusion-accent);
   color: #fff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
