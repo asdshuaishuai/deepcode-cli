@@ -153,6 +153,16 @@ export async function unstage(cwd: string, file: string): Promise<{ ok: boolean;
   }
 }
 
+/** Discard working-tree changes for a file (`git checkout -- <file>`). */
+export async function discard(cwd: string, file: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await git(cwd, ["checkout", "--", file]);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: toError(err) };
+  }
+}
+
 /** Commit the staged changes with `message`. */
 export async function commit(cwd: string, message: string): Promise<{ ok: boolean; error?: string }> {
   const trimmed = message.trim();

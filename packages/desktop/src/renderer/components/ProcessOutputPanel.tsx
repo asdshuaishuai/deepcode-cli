@@ -102,7 +102,10 @@ export function ProcessOutputPanel({ processes, stdoutRef, onDismiss }: ProcessO
   return (
     <div className="ui-process-panel">
       <div className="ui-process-panel-head">
-        <span className="ui-process-panel-title">📟 {t("process.title")}</span>
+        <span className="ui-process-panel-title">
+          {processes.length > 0 ? <span className="ui-process-running-dot" /> : null}
+          {t("process.title")}
+        </span>
         <span className="ui-process-panel-meta">
           {timeoutProcess
             ? `${t("process.timeout")} ${formatTimeout(timeoutProcess.timeoutMs)}`
@@ -111,6 +114,17 @@ export function ProcessOutputPanel({ processes, stdoutRef, onDismiss }: ProcessO
           {processes.length} {t("process.running")}
         </span>
         <span className="ui-process-panel-actions">
+          <button
+            className="ui-process-btn"
+            onClick={() => {
+              stdoutRef.current?.clear();
+              setStdoutText("");
+              setTemporaryStatus(t("process.cleared"));
+            }}
+            title={t("process.clear")}
+          >
+            ⌫
+          </button>
           <button
             className="ui-process-btn"
             onClick={() => void handleAdjustTimeout(BASH_TIMEOUT_INCREMENT_MS)}
@@ -125,7 +139,7 @@ export function ProcessOutputPanel({ processes, stdoutRef, onDismiss }: ProcessO
           >
             −
           </button>
-          <button className="ui-process-btn ui-process-btn-close" onClick={onDismiss} title="Esc">
+          <button className="ui-process-btn ui-process-btn-close" onClick={onDismiss} title="⌘J / Esc">
             ✕
           </button>
         </span>
@@ -133,7 +147,8 @@ export function ProcessOutputPanel({ processes, stdoutRef, onDismiss }: ProcessO
       <div className="ui-process-panel-body" ref={containerRef} onScroll={handleScroll}>
         {lines.map((line, i) => (
           <div key={i} className="ui-process-line">
-            {line}
+            <span className="ui-process-line-no">{i + 1}</span>
+            <span className="ui-process-line-text">{line}</span>
           </div>
         ))}
       </div>

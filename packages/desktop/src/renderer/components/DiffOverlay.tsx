@@ -9,17 +9,36 @@ export type DiffTarget =
   | { kind: "agent"; sessionId: string; file: string }
   | { kind: "commit"; hash: string; subject?: string };
 
-type DiffRow = { text: string; kind: "added" | "removed" | "hunk" | "meta" | "context" };
+type DiffRow = {
+  text: string;
+  kind: "added" | "removed" | "hunk" | "meta" | "context";
+  oldNo?: number;
+  newNo?: number;
+};
 
 function classifyDiff(diff: string): DiffRow[] {
+  let oldLine = 0;
+  let newLine = 0;
   return diff.split("\n").map((line): DiffRow => {
-    if (line.startsWith("@@")) return { text: line, kind: "hunk" };
+    // Parse hunk headers to track line numbers
+    const hunkMatch = line.match(/^@@ -(\d+)/);
+    if (hunkMatch) {
+      oldLine = parseInt(hunkMatch[1] ?? "0", 10);
+      const newMatch = line.match(/\+(\d+)/);
+      newLine = parseInt(newMatch?.[1] ?? "0", 10);
+      return { text: line, kind: "hunk" };
+    }
     if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")) {
       return { text: line, kind: "meta" };
     }
-    if (line.startsWith("+")) return { text: line, kind: "added" };
-    if (line.startsWith("-")) return { text: line, kind: "removed" };
-    return { text: line, kind: "context" };
+    if (line.startsWith("+")) {
+      return { text: line, kind: "added", newNo: newLine++ };
+    }
+    if (line.startsWith("-")) {
+      return { text: line, kind: "removed", oldNo: oldLine++ };
+    }
+    // Context line
+    return { text: line, kind: "context", oldNo: oldLine++, newNo: newLine++ };
   });
 }
 
@@ -63,6 +82,8 @@ export function DiffOverlay({ target, onClose }: { target: DiffTarget; onClose: 
 
   const title = target.kind === "commit" ? (target.subject ?? target.hash) : (payload?.file ?? "");
   const rows = payload && !payload.binary ? classifyDiff(payload.diff) : [];
+  const addedCount = rows.filter((r) => r.kind === "added").length;
+  const removedCount = rows.filter((r) => r.kind === "removed").length;
 
   return (
     <div className="ui-diff-overlay" onClick={onClose}>
@@ -71,6 +92,12 @@ export function DiffOverlay({ target, onClose }: { target: DiffTarget; onClose: 
           <span className="ui-diff-overlay-title" title={title}>
             {title || t("diff.title")}
           </span>
+          {rows.length > 0 ? (
+            <span className="ui-diff-stats">
+              <span className="ui-diff-stat-add">+{addedCount}</span>
+              <span className="ui-diff-stat-del">-{removedCount}</span>
+            </span>
+          ) : null}
           <button
             className="ui-diff-overlay-close"
             onClick={onClose}
@@ -82,7 +109,9 @@ export function DiffOverlay({ target, onClose }: { target: DiffTarget; onClose: 
         </div>
         <div className="ui-diff-overlay-body">
           {loading ? (
-            <div className="ui-diff-empty">…</div>
+            <div className="ui-diff-empty ui-diff-loading">
+              <span className="ui-spinner" /> {t("diff.loading") || "Loading…"}
+            </div>
           ) : !payload ? (
             <div className="ui-diff-empty">{t("diff.selectFile")}</div>
           ) : payload.binary ? (
@@ -93,7 +122,9 @@ export function DiffOverlay({ target, onClose }: { target: DiffTarget; onClose: 
             <pre className="ui-diff-body">
               {rows.map((row, i) => (
                 <div key={i} className={`ui-diff-line ${row.kind}`}>
-                  {row.text || " "}
+                  <span className="ui-diff-ln">{row.oldNo ?? ""}</span>
+                  <span className="ui-diff-ln">{row.newNo ?? ""}</span>
+                  <span className="ui-diff-text">{row.text || " "}</span>
                 </div>
               ))}
             </pre>

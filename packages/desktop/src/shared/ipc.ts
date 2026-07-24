@@ -77,6 +77,7 @@ export const IpcRequest = {
   GitStatus: "git:status",
   GitStage: "git:stage",
   GitUnstage: "git:unstage",
+  GitDiscard: "git:discard",
   GitCommit: "git:commit",
   GitCurrentBranch: "git:currentBranch",
   GitListBranches: "git:listBranches",
@@ -88,6 +89,9 @@ export const IpcRequest = {
   // Agent changes (write/edit files in a session)
   AgentChangesList: "agent:changesList",
   AgentChangesDiff: "agent:changesDiff",
+
+  // Session export
+  SessionExport: "session:export",
 
   // CodeGraph index library
   CodegraphList: "codegraph:list",
@@ -353,6 +357,8 @@ export type DesktopApi = {
   gitStatus(): Promise<GitStatus>;
   gitStage(file: string): Promise<{ ok: boolean; error?: string }>;
   gitUnstage(file: string): Promise<{ ok: boolean; error?: string }>;
+  /** Discard working-tree changes for a file (`git checkout -- <file>`). */
+  gitDiscard(file: string): Promise<{ ok: boolean; error?: string }>;
   gitCommit(message: string): Promise<{ ok: boolean; error?: string }>;
   gitCurrentBranch(): Promise<string>;
   gitListBranches(): Promise<string[]>;
@@ -366,6 +372,10 @@ export type DesktopApi = {
   // ── Agent changes ───────────────────────────────────────────────────────
   agentChangesList(sessionId: string): Promise<AgentChangeFile[]>;
   agentChangesDiff(sessionId: string, file: string): Promise<DiffPayload>;
+
+  // ── Session export ────────────────────────────────────────────────────────
+  /** Export a session's messages as a Markdown file (save dialog). */
+  exportSession(sessionId: string): Promise<{ ok: boolean; path?: string; error?: string }>;
 
   // ── CodeGraph index library ─────────────────────────────────────────────
   /** List every known workspace with its CodeGraph initialization state. */

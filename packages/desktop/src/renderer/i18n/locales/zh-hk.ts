@@ -10,6 +10,7 @@ export const zhHK: Record<MessageKey, string> = {
   "common.close": "關閉",
   "common.apply": "套用",
   "common.remove": "移除",
+  "common.clear": "清除",
   "common.show": "顯示",
   "common.hide": "隱藏",
   "common.submit": "遞交",
@@ -39,6 +40,7 @@ export const zhHK: Record<MessageKey, string> = {
   "sidebar.search": "搜尋工作階段…",
   "sidebar.noResults": "無相符的工作階段。",
   "sidebar.rename": "重新命名",
+  "sidebar.export": "匯出",
   "sidebar.delete": "刪除",
 
   // ── Relative time ─────────────────────────────────────────
@@ -82,12 +84,17 @@ export const zhHK: Record<MessageKey, string> = {
   "welcome.skillsDesc": "瀏覽外掛並為任務附加技能。",
   "welcome.undoTitle": "復原與還原",
   "welcome.undoDesc": "回復對話或程式碼。",
+  "welcome.hintNew": "新增工作階段",
+  "welcome.hintPalette": "命令面板",
+  "welcome.hintShortcuts": "所有快捷鍵",
 
   // ── Message rendering ─────────────────────────────────────
   "msg.noContent": "（無內容）",
   "msg.images": "{n} 張圖片",
   "msg.thinking": "思考",
   "msg.reasoning": "推理中…",
+  "msg.copy": "複製",
+  "msg.copied": "已複製！",
   "msg.plan": "計劃",
   "msg.result": "結果",
   "msg.loadedSkill": "已載入技能：{name}",
@@ -180,6 +187,7 @@ export const zhHK: Record<MessageKey, string> = {
   "builtin.karpathy-guidelines.desc":
     "减少常见 LLM 编码错误的行为准则——避免过度复杂化、做精准的外科手术式改动、暴露假设、定义可验证的成功标准。",
   "context.compaction": "上下文",
+  "context.compacting": "壓縮中…",
 
   // ── Model modal ───────────────────────────────────────────
   "model.thinking": "思考",
@@ -190,6 +198,7 @@ export const zhHK: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "請求失敗。",
   "app.permissionDenied": "已拒絕授權。請在下方補充說明後按 Enter 繼續。",
+  "app.taskComplete": "任務已完成",
 
   // ── Process output panel ─────────────────────────────────
   "process.title": "進程輸出",
@@ -198,6 +207,8 @@ export const zhHK: Record<MessageKey, string> = {
   "process.running": "運行中",
   "process.timeoutSet": "超時已設為",
   "process.noAdjustable": "無可調整的 Bash 超時",
+  "process.clear": "清空輸出",
+  "process.cleared": "輸出已清空",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "設定",
@@ -304,9 +315,34 @@ export const zhHK: Record<MessageKey, string> = {
   "command.plugins.label": "外掛中心",
   "command.settings.label": "設定",
   "command.undo.label": "復原 / 還原",
+  "command.export.label": "匯出會話為 Markdown",
   "command.init.label": "產生 AGENTS.md",
   "command.raw.label": "切換推理顯示",
   "command.tokens.label": "Token 用量",
+
+  // ── Keyboard shortcuts modal ────────────────────────────────
+  "shortcuts.title": "鍵盤快捷鍵",
+  "shortcuts.global": "全域",
+  "shortcuts.composerGroup": "輸入框",
+  "shortcuts.inputGroup": "輸入",
+  "shortcuts.commandPalette": "命令面板",
+  "shortcuts.newSession": "新增工作階段",
+  "shortcuts.processPanel": "切換處理程序面板",
+  "shortcuts.toggleSidebar": "切換側邊欄",
+  "shortcuts.togglePanel": "切換底部面板",
+  "shortcuts.settings": "開啟設定",
+  "shortcuts.shortcuts": "顯示此面板",
+  "shortcuts.closeOverlay": "關閉覆蓋層 / 數據機框",
+  "shortcuts.send": "傳送訊息",
+  "shortcuts.newline": "換行",
+  "shortcuts.togglePlan": "切換計劃模式",
+  "shortcuts.undo": "復原",
+  "shortcuts.redo": "重做",
+  "shortcuts.history": "提示詞歷史",
+  "shortcuts.stopGeneration": "停止產生",
+  "shortcuts.slashCommands": "斜線命令",
+  "shortcuts.fileMention": "檔案引用",
+  "shortcuts.pasteImage": "貼上圖片",
 
   // ── Token usage panel ─────────────────────────────────────
   "tokens.title": "Token 用量",
@@ -353,6 +389,9 @@ export const zhHK: Record<MessageKey, string> = {
   "scm.changes": "變更",
   "scm.stage": "暫存",
   "scm.unstage": "取消暫存",
+  "scm.stageAll": "全部暫存",
+  "scm.unstageAll": "全部取消暫存",
+  "scm.discard": "丟棄更改",
   "scm.commit": "提交",
   "scm.commitPlaceholder": "提交訊息…",
   "scm.refresh": "重新整理",
@@ -365,6 +404,7 @@ export const zhHK: Record<MessageKey, string> = {
   "diff.noDiff": "沒有可顯示的差異。",
   "diff.selectFile": "選擇一個檔案以檢視其差異。",
   "diff.binary": "二進位檔案 — 不顯示差異。",
+  "diff.loading": "載入差異中…",
   "diff.noAgentChanges": "本工作階段沒有 Agent 檔案變更。",
 
   // ── deepStudio branding + new features ────────────────────

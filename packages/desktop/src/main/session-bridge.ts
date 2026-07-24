@@ -578,6 +578,10 @@ export class SessionBridge {
     return gitService.unstage(this.projectRoot, file);
   }
 
+  gitDiscard(file: string) {
+    return gitService.discard(this.projectRoot, file);
+  }
+
   gitCommit(message: string) {
     return gitService.commit(this.projectRoot, message);
   }

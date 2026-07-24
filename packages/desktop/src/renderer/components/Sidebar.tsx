@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 import type { SerializableSessionEntry, WorkspaceSessions } from "../../shared/ipc";
 import { api } from "../api";
 import { useI18n, type MessageKey, type Translate } from "../i18n";
-import { Button, IconButton, Input, StatusDot } from "../ui/index";
+import { IconButton, Input, StatusDot, IconChat } from "../ui/index";
 import { aggregateByWorkspace, aggregateUsage, formatTokens } from "../lib/token-usage";
 
 type Props = {
@@ -33,6 +33,22 @@ const KNOWN_STATUSES = new Set([
   "compacting",
   "idle",
 ]);
+
+/** Compact relative-time string (e.g. "3m", "2h", "5d"). */
+function relativeTime(iso: string | undefined): string {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 0) return "";
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d`;
+  const months = Math.floor(days / 30);
+  return `${months}mo`;
+}
 
 function statusLabel(status: string, t: Translate): string {
   return KNOWN_STATUSES.has(status) ? t(`status.${status}` as MessageKey) : status;
@@ -144,25 +160,54 @@ export function Sidebar({
           />
         ) : (
           <div className="ui-session-title">
-            <span className="ui-tree-icon">💬</span>
+            <span className="ui-tree-icon">
+              <IconChat />
+            </span>
             {entry.summary || t("sidebar.untitled")}
           </div>
         )}
         <div className="ui-session-meta">
           <StatusDot status={entry.status} />
           <span>{statusLabel(entry.status, t)}</span>
+          {entry.activeTokens > 0 ? (
+            <span className="ui-session-tokens-badge">{formatTokens(entry.activeTokens)}</span>
+          ) : null}
+          {entry.updateTime ? <span className="ui-session-time">{relativeTime(entry.updateTime)}</span> : null}
         </div>
-        {isActive && editingId !== entry.id ? (
+        {editingId !== entry.id ? (
           <div className="ui-session-actions" onClick={(e) => e.stopPropagation()}>
-            <Button size="sm" variant="subtle" onClick={() => beginRename(entry)}>
-              {t("sidebar.rename")}
-            </Button>
-            <Button size="sm" variant="subtle" onClick={() => onArchive(entry.id)}>
-              {t("workspace.archive")}
-            </Button>
-            <Button size="sm" variant="subtle" onClick={() => onDelete(entry.id)}>
-              {t("sidebar.delete")}
-            </Button>
+            <IconButton
+              className="ui-icon-btn--sm"
+              title={t("sidebar.rename")}
+              aria-label={t("sidebar.rename")}
+              onClick={() => beginRename(entry)}
+            >
+              ✎
+            </IconButton>
+            <IconButton
+              className="ui-icon-btn--sm"
+              title={t("sidebar.export")}
+              aria-label={t("sidebar.export")}
+              onClick={() => void api.exportSession(entry.id)}
+            >
+              ⤓
+            </IconButton>
+            <IconButton
+              className="ui-icon-btn--sm"
+              title={t("workspace.archive")}
+              aria-label={t("workspace.archive")}
+              onClick={() => onArchive(entry.id)}
+            >
+              ▣
+            </IconButton>
+            <IconButton
+              className="ui-icon-btn--sm"
+              title={t("sidebar.delete")}
+              aria-label={t("sidebar.delete")}
+              onClick={() => onDelete(entry.id)}
+            >
+              ✕
+            </IconButton>
           </div>
         ) : null}
       </div>
@@ -172,7 +217,10 @@ export function Sidebar({
   return (
     <div className="ui-session-panel">
       <div className="ui-session-panel-head">
-        <span>{t("sidebar.sessions")}</span>
+        <span>
+          {t("sidebar.sessions")}
+          {sessions.length > 0 ? <span className="ui-session-count-badge">{sessions.length}</span> : null}
+        </span>
         <div className="ui-session-panel-head-actions">
           <IconButton onClick={onNewWorkspace} title={t("sidebar.newWorkspace")} aria-label={t("sidebar.newWorkspace")}>
             ＋
@@ -190,6 +238,11 @@ export function Sidebar({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        {searchQuery ? (
+          <button className="ui-search-clear" onClick={() => setSearchQuery("")} aria-label={t("common.clear")}>
+            ✕
+          </button>
+        ) : null}
       </div>
 
       <div className="ui-session-list">
@@ -208,7 +261,7 @@ export function Sidebar({
                 title={w.root}
               >
                 <span className="ui-tree-caret">{isOpen ? "▾" : "▸"}</span>
-                <span className="ui-tree-icon">📁</span>
+                <span className="ui-tree-icon ui-tree-icon-folder" />
                 <span className="ui-tree-ws-label">{w.label}</span>
                 <span className="ui-tree-count">{w.sessions.length}</span>
                 <IconButton
@@ -240,7 +293,7 @@ export function Sidebar({
           <div className="ui-tree-workspace ui-tree-archived">
             <div className="ui-tree-ws-head" onClick={() => setArchivedOpen((v) => !v)}>
               <span className="ui-tree-caret">{archivedOpen || q ? "▾" : "▸"}</span>
-              <span className="ui-tree-icon">🗄</span>
+              <span className="ui-tree-icon ui-tree-icon-archive" />
               <span className="ui-tree-ws-label">{t("workspace.archivedGroup")}</span>
               <span className="ui-tree-count">{archived.length}</span>
             </div>
@@ -249,16 +302,28 @@ export function Sidebar({
                 {archived.map(({ root, session }) => (
                   <div key={session.id} className="ui-session-item ui-tree-session archived">
                     <div className="ui-session-title">
-                      <span className="ui-tree-icon">💬</span>
+                      <span className="ui-tree-icon">
+                        <IconChat />
+                      </span>
                       {session.summary || t("sidebar.untitled")}
                     </div>
                     <div className="ui-session-actions" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" variant="subtle" onClick={() => onUnarchive(session.id)}>
-                        {t("workspace.unarchive")}
-                      </Button>
-                      <Button size="sm" variant="subtle" onClick={() => onDelete(session.id)}>
-                        {t("sidebar.delete")}
-                      </Button>
+                      <IconButton
+                        className="ui-icon-btn--sm"
+                        title={t("workspace.unarchive")}
+                        aria-label={t("workspace.unarchive")}
+                        onClick={() => onUnarchive(session.id)}
+                      >
+                        ▣
+                      </IconButton>
+                      <IconButton
+                        className="ui-icon-btn--sm"
+                        title={t("sidebar.delete")}
+                        aria-label={t("sidebar.delete")}
+                        onClick={() => onDelete(session.id)}
+                      >
+                        ✕
+                      </IconButton>
                     </div>
                     <div className="ui-tree-ws-path" title={root}>
                       {root}

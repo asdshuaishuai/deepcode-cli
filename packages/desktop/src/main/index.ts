@@ -5,6 +5,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeFile } from "node:fs/promises";
 import {
   setShellIfWindows,
   configureCodegraphVendorRoot,
@@ -250,6 +251,7 @@ function registerIpc(): void {
   handle(IpcRequest.GitStatus, () => getBridge().gitStatus());
   handle(IpcRequest.GitStage, (file: string) => getBridge().gitStage(file));
   handle(IpcRequest.GitUnstage, (file: string) => getBridge().gitUnstage(file));
+  handle(IpcRequest.GitDiscard, (file: string) => getBridge().gitDiscard(file));
   handle(IpcRequest.GitCommit, (message: string) => getBridge().gitCommit(message));
   handle(IpcRequest.GitCurrentBranch, () => getBridge().gitCurrentBranch());
   handle(IpcRequest.GitListBranches, () => getBridge().gitListBranches());
@@ -290,6 +292,35 @@ function registerIpc(): void {
   handle(IpcRequest.AgentChangesDiff, (sessionId: string, file: string) =>
     getBridge().agentChangesDiff(sessionId, file)
   );
+
+  // ── Session export ──────────────────────────────────────────────────────────
+  handle(IpcRequest.SessionExport, async (sessionId: string) => {
+    if (!mainWindow) return { ok: false, error: "no window" };
+    const messages = await getBridge().listMessages(sessionId);
+    if (!messages || messages.length === 0) return { ok: false, error: "empty session" };
+    const entry = await getBridge().getSession(sessionId);
+    const title = entry?.summary || sessionId.slice(0, 8);
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: "Export session as Markdown",
+      defaultPath: `${title.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fff]/g, "_").slice(0, 60)}.md`,
+      filters: [{ name: "Markdown", extensions: ["md"] }],
+    });
+    if (result.canceled || !result.filePath) return { ok: false };
+    // Build markdown content from messages
+    const lines: string[] = [`# ${title}`, ""];
+    for (const msg of messages) {
+      if (!msg.visible || msg.role === "system") continue;
+      const role = msg.role === "user" ? "**User**" : msg.role === "assistant" ? "**Assistant**" : "**Tool**";
+      lines.push(`## ${role}`, "");
+      if (msg.content) lines.push(msg.content, "");
+    }
+    try {
+      await writeFile(result.filePath, lines.join("\n"), "utf-8");
+      return { ok: true, path: result.filePath };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 app.whenReady().then(() => {

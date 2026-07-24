@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import type { AskUserQuestionAnswers, AskUserQuestionItem } from "../lib/ask-question";
 import { useI18n } from "../i18n";
 import { Button, Card, CardHeader, Row } from "../ui/index";
@@ -38,6 +38,25 @@ export function QuestionCard({ questions, onSubmit, onCancel }: Props): JSX.Elem
 
   const answered = questions.every((_, i) => (selections[i]?.size ?? 0) > 0);
 
+  // Keyboard: number keys select options for the first unanswered question
+  useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const num = parseInt(e.key, 10);
+      if (num < 1 || num > 9) return;
+      // Find first unanswered question
+      const qIdx = questions.findIndex((_, i) => (selections[i]?.size ?? 0) === 0);
+      if (qIdx === -1) return;
+      const q = questions[qIdx]!;
+      const optIdx = num - 1;
+      if (optIdx < q.options.length) {
+        toggle(qIdx, q.options[optIdx]!.label, q.multiSelect === true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   function submit(): void {
     const answers: AskUserQuestionAnswers = {};
     questions.forEach((q, i) => {
@@ -50,7 +69,7 @@ export function QuestionCard({ questions, onSubmit, onCancel }: Props): JSX.Elem
   }
 
   return (
-    <Card>
+    <Card className="ui-card-enter">
       <CardHeader>{t("question.title")}</CardHeader>
       {questions.map((q, qIndex) => (
         <div key={qIndex} className="ui-q-block">

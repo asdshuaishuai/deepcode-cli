@@ -24,7 +24,8 @@ const customRenderer: RendererObject = {
     const langClass = lang ? ` code-${lang}` : "";
     const dataLang = lang ? ` data-lang="${lang}"` : "";
     const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    return `<pre class="code-block${langClass}"${dataLang}><code class="language-${lang || "text"}">${escaped}</code></pre>\n`;
+    const langLabel = lang ? `<span class="code-block-lang">${lang}</span>` : "";
+    return `<div class="code-block-wrap${langClass}"${dataLang}>${langLabel}<button class="code-block-copy" type="button" aria-label="Copy code">⧉</button><pre class="code-block"><code class="language-${lang || "text"}">${escaped}</code></pre></div>\n`;
   },
 };
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import type { AgentChangeFile, GitLogEntry, GitStatus, GitStatusFile } from "../../shared/ipc";
 import { api } from "../api";
 import { useI18n } from "../i18n";
@@ -13,6 +13,16 @@ type Props = {
   /** Open the universal diff overlay for any target (git file / commit / agent). */
   onOpenDiff: (target: DiffTarget) => void;
 };
+
+/** Map git status letter to a CSS modifier for color coding. */
+function statusCls(letter: string): string {
+  const l = letter.toUpperCase();
+  if (l === "M") return "modified";
+  if (l === "A" || l === "?") return "added";
+  if (l === "D") return "deleted";
+  if (l === "R" || l === "C") return "renamed";
+  return "";
+}
 
 const EMPTY_STATUS: GitStatus = { isRepo: false, branch: "", files: [] };
 
@@ -34,6 +44,34 @@ export function SourceControlPanel({ refreshKey, sessionId, onOpenDiff }: Props)
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [splitRatio, setSplitRatio] = useState(55);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+
+  const handleSplitResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const onMove = (ev: MouseEvent) => {
+      if (!draggingRef.current) return;
+      const y = ev.clientY - rect.top;
+      const ratio = Math.max(20, Math.min(80, (y / rect.height) * 100));
+      setSplitRatio(ratio);
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, []);
 
   const reload = useCallback(async () => {
     const [nextStatus, nextLog, nextAgent] = await Promise.all([
@@ -61,6 +99,24 @@ export function SourceControlPanel({ refreshKey, sessionId, onOpenDiff }: Props)
   const unstage = useCallback(
     async (file: string) => {
       await api.gitUnstage(file);
+      await reload();
+    },
+    [reload]
+  );
+
+  const stageAll = useCallback(async () => {
+    await api.gitStage(".");
+    await reload();
+  }, [reload]);
+
+  const unstageAll = useCallback(async () => {
+    await api.gitUnstage(".");
+    await reload();
+  }, [reload]);
+
+  const discard = useCallback(
+    async (file: string) => {
+      await api.gitDiscard(file);
       await reload();
     },
     [reload]
@@ -106,7 +162,9 @@ export function SourceControlPanel({ refreshKey, sessionId, onOpenDiff }: Props)
       className="ui-scm-file"
       onClick={() => onOpenDiff({ kind: "git", file: file.path, staged: isStaged })}
     >
-      <span className="ui-scm-status">{(isStaged ? file.index : file.work) || "?"}</span>
+      <span className={`ui-scm-status ${statusCls(isStaged ? file.index : file.work)}`}>
+        {(isStaged ? file.index : file.work) || "?"}
+      </span>
       <span className="ui-scm-name" title={file.path}>
         {baseName(file.path)}
       </span>
@@ -117,9 +175,20 @@ export function SourceControlPanel({ refreshKey, sessionId, onOpenDiff }: Props)
             {t("scm.unstage")}
           </Button>
         ) : (
-          <Button size="sm" variant="subtle" onClick={() => void stage(file.path)}>
-            {t("scm.stage")}
-          </Button>
+          <>
+            <Button size="sm" variant="subtle" onClick={() => void stage(file.path)}>
+              {t("scm.stage")}
+            </Button>
+            <Button
+              size="sm"
+              variant="subtle"
+              className="ui-scm-discard"
+              onClick={() => void discard(file.path)}
+              title={t("scm.discard")}
+            >
+              ✕
+            </Button>
+          </>
         )}
       </span>
     </div>
@@ -149,26 +218,42 @@ export function SourceControlPanel({ refreshKey, sessionId, onOpenDiff }: Props)
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void commit();
           }}
         />
-        <Button variant="primary" size="sm" disabled={busy} onClick={() => void commit()}>
+        <Button variant="primary" size="sm" disabled={busy} onClick={() => void commit()} title="⌘↵">
           {t("scm.commit")}
         </Button>
       </div>
       {error ? <div className="ui-scm-error">{error}</div> : null}
 
       {/* Upper half: current changes (working tree + agent edits). */}
-      <div className="ui-scm-split-top">
+      <div className="ui-scm-split-top" ref={containerRef} style={{ flex: `0 0 ${splitRatio}%` }}>
         {status.files.length === 0 && agentFiles.length === 0 ? (
           <div className="ui-side-panel-empty">{t("scm.noChanges")}</div>
         ) : null}
         {staged.length > 0 ? (
           <>
-            <div className="ui-scm-group-head">{t("scm.stagedChanges")}</div>
+            <div className="ui-scm-group-head">
+              <span>
+                {t("scm.stagedChanges")}
+                <span className="ui-scm-count">{staged.length}</span>
+              </span>
+              <button className="ui-scm-group-action" onClick={() => void unstageAll()} title={t("scm.unstageAll")}>
+                −
+              </button>
+            </div>
             {staged.map((f) => renderFile(f, true))}
           </>
         ) : null}
         {unstaged.length > 0 ? (
           <>
-            <div className="ui-scm-group-head">{t("scm.changes")}</div>
+            <div className="ui-scm-group-head">
+              <span>
+                {t("scm.changes")}
+                <span className="ui-scm-count">{unstaged.length}</span>
+              </span>
+              <button className="ui-scm-group-action" onClick={() => void stageAll()} title={t("scm.stageAll")}>
+                +
+              </button>
+            </div>
             {unstaged.map((f) => renderFile(f, false))}
           </>
         ) : null}
@@ -192,8 +277,11 @@ export function SourceControlPanel({ refreshKey, sessionId, onOpenDiff }: Props)
         ) : null}
       </div>
 
+      {/* Draggable split divider */}
+      <div className="ui-scm-split-handle" onMouseDown={handleSplitResize} />
+
       {/* Lower half: commit history. */}
-      <div className="ui-scm-split-bottom">
+      <div className="ui-scm-split-bottom" style={{ flex: `1 1 ${100 - splitRatio}%` }}>
         <div className="ui-scm-group-head">{t("scm.history")}</div>
         {log.length === 0 ? (
           <div className="ui-side-panel-empty">{t("scm.noHistory")}</div>

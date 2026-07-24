@@ -274,6 +274,11 @@ body {
   border-color: var(--fusion-glass-border);
   border-radius: var(--ui-radius-md);
 }
+.ui-md .code-block-wrap pre.code-block {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: var(--fusion-glass-border);
+  border-radius: var(--ui-radius-md);
+}
 .ui-md code {
   background: rgba(0, 0, 0, 0.25);
   border-radius: var(--ui-radius-sm);

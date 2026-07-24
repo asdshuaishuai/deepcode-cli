@@ -4,6 +4,28 @@ import type { ReasoningMode } from "../lib/appearance";
 import { findExpandedThinkingId } from "../lib/messages";
 import { Message } from "./Message";
 import { useI18n } from "../i18n";
+import { IconWelcomePlan, IconWelcomeInit, IconWelcomeSkills, IconWelcomeUndo } from "../ui/index";
+
+/** Format an ISO date string as a short locale date (e.g. "Jul 21, 2026"). */
+function formatDateSeparator(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return "";
+  }
+}
+
+/** Get the date key (YYYY-MM-DD) from an ISO string for grouping. */
+function dateKey(iso: string | undefined): string {
+  if (!iso) return "";
+  return iso.slice(0, 10);
+}
 
 type Props = {
   messages: SessionMessage[];
@@ -14,9 +36,18 @@ type Props = {
   onQuickAction?: (action: "plan" | "init" | "skills" | "undo") => void;
   /** Interactive prompt cards (permission / question / plan) shown after the messages. */
   footer?: React.ReactNode;
+  /** Whether the session is currently compacting its context. */
+  compacting?: boolean;
 };
 
-export function MessageList({ messages, hasActiveSession, reasoningMode, onQuickAction, footer }: Props): JSX.Element {
+export function MessageList({
+  messages,
+  hasActiveSession,
+  reasoningMode,
+  onQuickAction,
+  footer,
+  compacting = false,
+}: Props): JSX.Element {
   const { t } = useI18n();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -35,6 +66,9 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
   // stopping at an intermediate position. The reported bug.)
   const [stuckToBottom, setStuckToBottom] = useState(true);
   const stuckToBottomRef = useRef(true);
+  // Track how many messages arrived while the user was scrolled up.
+  const [unreadCount, setUnreadCount] = useState(0);
+  const prevMsgCountRef = useRef(0);
 
   // Recompute stuck-state on scroll, on resize, and on content changes
   // (because the scroll position is now in a different "place" relative
@@ -64,8 +98,16 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
   // does NOT immediately re-trigger a smooth scroll. The next content
   // change is the moment we follow; pure scroll motion is left alone.
   useEffect(() => {
-    if (!stuckToBottomRef.current) return;
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const delta = messages.length - prevMsgCountRef.current;
+    prevMsgCountRef.current = messages.length;
+    if (!stuckToBottomRef.current && delta > 0) {
+      setUnreadCount((c) => c + delta);
+      return;
+    }
+    if (stuckToBottomRef.current) {
+      setUnreadCount(0);
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   }, [messages, footer]);
 
   // If the user clicks into the conversation from elsewhere (or expands
@@ -75,15 +117,16 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
   const handleJumpToLatest = (): void => {
     stuckToBottomRef.current = true;
     setStuckToBottom(true);
+    setUnreadCount(0);
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   };
 
   if (!hasActiveSession) {
-    const cards: { action: "plan" | "init" | "skills" | "undo"; icon: string; title: string; desc: string }[] = [
-      { action: "plan", icon: "◔", title: t("welcome.planTitle"), desc: t("welcome.planDesc") },
-      { action: "init", icon: "📄", title: t("welcome.initTitle"), desc: t("welcome.initDesc") },
-      { action: "skills", icon: "🧩", title: t("welcome.skillsTitle"), desc: t("welcome.skillsDesc") },
-      { action: "undo", icon: "↺", title: t("welcome.undoTitle"), desc: t("welcome.undoDesc") },
+    const cards: { action: "plan" | "init" | "skills" | "undo"; icon: JSX.Element; title: string; desc: string }[] = [
+      { action: "plan", icon: <IconWelcomePlan />, title: t("welcome.planTitle"), desc: t("welcome.planDesc") },
+      { action: "init", icon: <IconWelcomeInit />, title: t("welcome.initTitle"), desc: t("welcome.initDesc") },
+      { action: "skills", icon: <IconWelcomeSkills />, title: t("welcome.skillsTitle"), desc: t("welcome.skillsDesc") },
+      { action: "undo", icon: <IconWelcomeUndo />, title: t("welcome.undoTitle"), desc: t("welcome.undoDesc") },
     ];
     return (
       <div className="ui-conversation">
@@ -108,6 +151,10 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
               ))}
             </div>
           </div>
+          <div className="ui-welcome-hints">
+            <kbd>⌘N</kbd> {t("welcome.hintNew")} · <kbd>⌘K</kbd> {t("welcome.hintPalette")} · <kbd>⌘?</kbd>{" "}
+            {t("welcome.hintShortcuts")}
+          </div>
         </div>
       </div>
     );
@@ -120,16 +167,36 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
           <div className="ui-empty" style={{ padding: "60px 0" }}>
             {t("empty.newSession")}
           </div>
+        ) : messages.length > 0 ? (
+          <div className="ui-msg-count-indicator">
+            {messages.length} {messages.length === 1 ? "message" : "messages"}
+          </div>
         ) : null}
-        {messages.map((message) => (
-          <Message
-            key={message.id}
-            message={message}
-            reasoningMode={reasoningMode}
-            expandedThinkingId={expandedThinkingId}
-          />
-        ))}
+        {messages.map((message, idx) => {
+          // Insert a date separator when the day changes between messages.
+          const prevMsg = idx > 0 ? messages[idx - 1] : null;
+          const showSep = prevMsg && dateKey(prevMsg.createTime) !== dateKey(message.createTime);
+          return (
+            <div key={message.id} className="ui-msg-wrap">
+              {showSep ? (
+                <div className="ui-date-separator">
+                  <span className="ui-date-separator-line" />
+                  <span className="ui-date-separator-label">{formatDateSeparator(message.createTime)}</span>
+                  <span className="ui-date-separator-line" />
+                </div>
+              ) : null}
+              <Message message={message} reasoningMode={reasoningMode} expandedThinkingId={expandedThinkingId} />
+            </div>
+          );
+        })}
         {footer}
+        {/* Compaction notification — shown while the engine compresses context */}
+        {compacting ? (
+          <div className="ui-compaction-banner">
+            <span className="ui-compaction-spinner" />
+            <span>{t("context.compacting")}</span>
+          </div>
+        ) : null}
         <div ref={bottomRef} />
       </div>
       {/* Floating jump-to-latest pill — appears when the user has scrolled
@@ -145,6 +212,7 @@ export function MessageList({ messages, hasActiveSession, reasoningMode, onQuick
           <span className="ui-jump-to-latest-arrow" aria-hidden="true">
             ↓
           </span>
+          {unreadCount > 0 ? <span className="ui-jump-badge">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
           <span>{t("msg.jumpToLatest")}</span>
         </button>
       )}

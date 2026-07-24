@@ -15,6 +15,7 @@ export const en = {
   "common.close": "Close",
   "common.apply": "Apply",
   "common.remove": "Remove",
+  "common.clear": "Clear",
   "common.show": "Show",
   "common.hide": "Hide",
   "common.submit": "Submit",
@@ -44,6 +45,7 @@ export const en = {
   "sidebar.search": "Search sessions…",
   "sidebar.noResults": "No matching sessions.",
   "sidebar.rename": "Rename",
+  "sidebar.export": "Export",
   "sidebar.delete": "Delete",
 
   // ── Relative time ─────────────────────────────────────────
@@ -87,12 +89,17 @@ export const en = {
   "welcome.skillsDesc": "Browse plugins and attach skills to a task.",
   "welcome.undoTitle": "Undo & restore",
   "welcome.undoDesc": "Roll back the conversation or the code.",
+  "welcome.hintNew": "New session",
+  "welcome.hintPalette": "Command palette",
+  "welcome.hintShortcuts": "All shortcuts",
 
   // ── Message rendering ─────────────────────────────────────
   "msg.noContent": "(no content)",
   "msg.images": "{n} image(s)",
   "msg.thinking": "Thinking",
   "msg.reasoning": "reasoning…",
+  "msg.copy": "Copy",
+  "msg.copied": "Copied!",
   "msg.plan": "Plan",
   "msg.result": "Result",
   "msg.loadedSkill": "Loaded skill: {name}",
@@ -185,6 +192,7 @@ export const en = {
   "builtin.karpathy-guidelines.desc":
     "Behavioral guidelines to reduce common LLM coding mistakes — avoid overcomplication, make surgical changes, surface assumptions, define verifiable success criteria.",
   "context.compaction": "Context",
+  "context.compacting": "Compacting…",
 
   // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
   "model.thinking": "Thinking",
@@ -195,6 +203,7 @@ export const en = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "Request failed.",
   "app.permissionDenied": "Permission denied. Add a reply below, then press Enter to continue.",
+  "app.taskComplete": "Task completed",
 
   // ── Process output panel ─────────────────────────────────
   "process.title": "Process Output",
@@ -203,6 +212,8 @@ export const en = {
   "process.running": "running",
   "process.timeoutSet": "Timeout set to",
   "process.noAdjustable": "No adjustable Bash timeout",
+  "process.clear": "Clear output",
+  "process.cleared": "Output cleared",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "Settings",
@@ -310,9 +321,34 @@ export const en = {
   "command.plugins.label": "Plugin Center",
   "command.settings.label": "Settings",
   "command.undo.label": "Undo / restore",
+  "command.export.label": "Export session as Markdown",
   "command.init.label": "Generate AGENTS.md",
   "command.raw.label": "Cycle reasoning display",
   "command.tokens.label": "Token usage",
+
+  // ── Keyboard shortcuts modal ────────────────────────────────
+  "shortcuts.title": "Keyboard Shortcuts",
+  "shortcuts.global": "Global",
+  "shortcuts.composerGroup": "Composer",
+  "shortcuts.inputGroup": "Input",
+  "shortcuts.commandPalette": "Command palette",
+  "shortcuts.newSession": "New session",
+  "shortcuts.processPanel": "Toggle process panel",
+  "shortcuts.toggleSidebar": "Toggle sidebar",
+  "shortcuts.togglePanel": "Toggle bottom panel",
+  "shortcuts.settings": "Open settings",
+  "shortcuts.shortcuts": "Show this panel",
+  "shortcuts.closeOverlay": "Close overlay / modal",
+  "shortcuts.send": "Send message",
+  "shortcuts.newline": "New line",
+  "shortcuts.togglePlan": "Toggle Plan Mode",
+  "shortcuts.undo": "Undo",
+  "shortcuts.redo": "Redo",
+  "shortcuts.history": "Prompt history",
+  "shortcuts.stopGeneration": "Stop generation",
+  "shortcuts.slashCommands": "Slash commands",
+  "shortcuts.fileMention": "File mention",
+  "shortcuts.pasteImage": "Paste image",
 
   // ── Token usage panel ─────────────────────────────────────
   "tokens.title": "Token usage",
@@ -359,6 +395,9 @@ export const en = {
   "scm.changes": "Changes",
   "scm.stage": "Stage",
   "scm.unstage": "Unstage",
+  "scm.stageAll": "Stage All",
+  "scm.unstageAll": "Unstage All",
+  "scm.discard": "Discard Changes",
   "scm.commit": "Commit",
   "scm.commitPlaceholder": "Commit message…",
   "scm.refresh": "Refresh",
@@ -372,6 +411,7 @@ export const en = {
   "diff.selectFile": "Select a file to view its diff.",
   "diff.binary": "Binary file — diff not shown.",
   "diff.noAgentChanges": "No agent file changes in this session.",
+  "diff.loading": "Loading diff…",
 
   // ── deepStudio branding + new features ────────────────────
   "app.name": "DeepOrca",
@@ -452,6 +492,7 @@ export const zh: Record<MessageKey, string> = {
   "common.close": "关闭",
   "common.apply": "应用",
   "common.remove": "移除",
+  "common.clear": "清除",
   "common.show": "显示",
   "common.hide": "隐藏",
   "common.submit": "提交",
@@ -481,6 +522,7 @@ export const zh: Record<MessageKey, string> = {
   "sidebar.search": "搜索会话…",
   "sidebar.noResults": "无匹配会话。",
   "sidebar.rename": "重命名",
+  "sidebar.export": "导出",
   "sidebar.delete": "删除",
 
   // ── Relative time ─────────────────────────────────────────
@@ -524,12 +566,17 @@ export const zh: Record<MessageKey, string> = {
   "welcome.skillsDesc": "浏览插件并为任务附加技能。",
   "welcome.undoTitle": "撤销与恢复",
   "welcome.undoDesc": "回滚对话或代码。",
+  "welcome.hintNew": "新建会话",
+  "welcome.hintPalette": "命令面板",
+  "welcome.hintShortcuts": "所有快捷键",
 
   // ── Message rendering ─────────────────────────────────────
   "msg.noContent": "（无内容）",
   "msg.images": "{n} 张图片",
   "msg.thinking": "思考",
   "msg.reasoning": "推理中…",
+  "msg.copy": "复制",
+  "msg.copied": "已复制！",
   "msg.plan": "计划",
   "msg.result": "结果",
   "msg.loadedSkill": "已加载技能：{name}",
@@ -622,6 +669,7 @@ export const zh: Record<MessageKey, string> = {
   "builtin.karpathy-guidelines.desc":
     "减少常见 LLM 编码错误的行为准则——避免过度复杂化、做精准的外科手术式改动、暴露假设、定义可验证的成功标准。",
   "context.compaction": "上下文",
+  "context.compacting": "压缩中…",
 
   // ── Model selector (DeepSeek only — no custom / OpenAI-compatible) ──
   "model.thinking": "思考",
@@ -632,6 +680,7 @@ export const zh: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "请求失败。",
   "app.permissionDenied": "已拒绝授权。请在下方补充说明后按回车继续。",
+  "app.taskComplete": "任务已完成",
 
   // ── Process output panel ─────────────────────────────────
   "process.title": "进程输出",
@@ -640,6 +689,8 @@ export const zh: Record<MessageKey, string> = {
   "process.running": "运行中",
   "process.timeoutSet": "超时已设为",
   "process.noAdjustable": "无可调整的 Bash 超时",
+  "process.clear": "清空输出",
+  "process.cleared": "输出已清空",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "设置",
@@ -746,9 +797,34 @@ export const zh: Record<MessageKey, string> = {
   "command.plugins.label": "插件中心",
   "command.settings.label": "设置",
   "command.undo.label": "撤销 / 恢复",
+  "command.export.label": "导出会话为 Markdown",
   "command.init.label": "生成 AGENTS.md",
   "command.raw.label": "切换推理显示",
   "command.tokens.label": "Token 消耗",
+
+  // ── Keyboard shortcuts modal ────────────────────────────────
+  "shortcuts.title": "键盘快捷键",
+  "shortcuts.global": "全局",
+  "shortcuts.composerGroup": "输入框",
+  "shortcuts.inputGroup": "输入",
+  "shortcuts.commandPalette": "命令面板",
+  "shortcuts.newSession": "新建会话",
+  "shortcuts.processPanel": "切换进程面板",
+  "shortcuts.toggleSidebar": "切换侧边栏",
+  "shortcuts.togglePanel": "切换底部面板",
+  "shortcuts.settings": "打开设置",
+  "shortcuts.shortcuts": "显示此面板",
+  "shortcuts.closeOverlay": "关闭弹层 / 模态框",
+  "shortcuts.send": "发送消息",
+  "shortcuts.newline": "换行",
+  "shortcuts.togglePlan": "切换计划模式",
+  "shortcuts.undo": "撤销",
+  "shortcuts.redo": "重做",
+  "shortcuts.history": "提示词历史",
+  "shortcuts.stopGeneration": "停止生成",
+  "shortcuts.slashCommands": "斜杠命令",
+  "shortcuts.fileMention": "文件引用",
+  "shortcuts.pasteImage": "粘贴图片",
 
   // ── Token usage panel ─────────────────────────────────────
   "tokens.title": "Token 消耗",
@@ -795,6 +871,9 @@ export const zh: Record<MessageKey, string> = {
   "scm.changes": "更改",
   "scm.stage": "暂存",
   "scm.unstage": "取消暂存",
+  "scm.stageAll": "全部暂存",
+  "scm.unstageAll": "全部取消暂存",
+  "scm.discard": "丢弃更改",
   "scm.commit": "提交",
   "scm.commitPlaceholder": "提交信息…",
   "scm.refresh": "刷新",
@@ -808,6 +887,7 @@ export const zh: Record<MessageKey, string> = {
   "diff.selectFile": "选择一个文件以查看其差异。",
   "diff.binary": "二进制文件 — 不显示差异。",
   "diff.noAgentChanges": "本会话没有 Agent 文件改动。",
+  "diff.loading": "加载差异中…",
 
   // ── deepStudio branding + new features ────────────────────
   "app.name": "DeepOrca",

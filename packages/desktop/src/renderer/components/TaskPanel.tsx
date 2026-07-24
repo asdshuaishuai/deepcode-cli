@@ -24,16 +24,46 @@ function findLatestPlan(messages: SessionMessage[]): string | null {
   return null;
 }
 
+/** Parse checkbox stats from markdown plan text. */
+function parseCheckboxProgress(plan: string): { done: number; total: number } {
+  const lines = plan.split("\n");
+  let done = 0;
+  let total = 0;
+  for (const line of lines) {
+    if (/^\s*[-*]\s+\[x\]/i.test(line)) {
+      done += 1;
+      total += 1;
+    } else if (/^\s*[-*]\s+\[\s?\]/.test(line)) {
+      total += 1;
+    }
+  }
+  return { done, total };
+}
+
 /** Left-panel Task view: renders the current session's latest plan checklist. */
 export function TaskPanel({ messages }: Props): JSX.Element {
   const { t } = useI18n();
   const plan = useMemo(() => findLatestPlan(messages), [messages]);
+  const progress = useMemo(() => (plan ? parseCheckboxProgress(plan) : null), [plan]);
 
   return (
     <div className="ui-side-panel">
       <div className="ui-side-panel-head">
         <span>{t("task.title")}</span>
+        {progress && progress.total > 0 ? (
+          <span className="ui-task-progress-badge">
+            {progress.done}/{progress.total}
+          </span>
+        ) : null}
       </div>
+      {progress && progress.total > 0 ? (
+        <div className="ui-task-progress-bar">
+          <div
+            className="ui-task-progress-fill"
+            style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+          />
+        </div>
+      ) : null}
       <div className="ui-side-panel-body">
         {plan ? (
           <div className="ui-task-plan ui-markdown" dangerouslySetInnerHTML={{ __html: renderMarkdown(plan) }} />

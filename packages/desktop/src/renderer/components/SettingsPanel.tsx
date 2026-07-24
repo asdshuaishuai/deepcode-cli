@@ -46,11 +46,11 @@ const TABS: { id: Tab; labelKey: MessageKey }[] = [
 ];
 
 const TAB_ICONS: Record<Tab, string> = {
-  connection: "🔗",
-  language: "🌐",
+  connection: "⌁",
+  language: "◐",
   model: "✦",
-  permissions: "🔒",
-  tokens: "📊",
+  permissions: "⊘",
+  tokens: "▥",
   about: "ℹ",
 };
 

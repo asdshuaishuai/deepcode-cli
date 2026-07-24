@@ -8,6 +8,8 @@ export type CommandItem = {
   icon?: ReactNode;
   /** Extra searchable text (aliases, command names). */
   keywords?: string;
+  /** Keyboard shortcut hint displayed on the right (e.g. "⌘K"). */
+  shortcut?: string;
   run: () => void;
 };
 
@@ -104,6 +106,7 @@ export function CommandPalette({
                 {item.icon ? <span className="ui-command-option-icon">{item.icon}</span> : null}
                 <span className="ui-command-option-label">{item.label}</span>
                 {item.description ? <span className="ui-command-option-desc">{item.description}</span> : null}
+                {item.shortcut ? <kbd className="ui-command-option-shortcut">{item.shortcut}</kbd> : null}
               </button>
             ))
           )}

@@ -2,6 +2,37 @@ import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import type { FileMatch } from "../../shared/ipc";
 import { api } from "../api";
 
+/** SVG icon for a directory folder. */
+function FolderIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path
+        d="M1.5 3.5A1 1 0 0 1 2.5 2.5h3.586a1 1 0 0 1 .707.293l1.414 1.414a1 1 0 0 0 .707.293h4.586a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-8z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** SVG icon for a file document. */
+function FileIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path
+        d="M3.5 2.5h6l3 3v7a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <path d="M9.5 2.5v3h3" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 type Props = {
   /** Whether the menu is visible (based on @ token detection). */
   open: boolean;
@@ -56,8 +87,29 @@ export function FileMentionMenu({ open, query, onSelect, onClose, anchorRect }: 
     [onSelect, onClose]
   );
 
-  // Keyboard navigation (handled by parent Composer)
-  // Exposed for parent to call via ref if needed
+  // Keyboard navigation
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveIndex((i) => (i + 1) % Math.max(1, items.length));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveIndex((i) => (i - 1 + items.length) % Math.max(1, items.length));
+      } else if (e.key === "Enter" && items.length > 0) {
+        e.preventDefault();
+        const item = items[activeIndex];
+        if (item) handleSelect(item);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, items, activeIndex, handleSelect, onClose]);
+
   if (!open) return null;
 
   return (
@@ -66,22 +118,28 @@ export function FileMentionMenu({ open, query, onSelect, onClose, anchorRect }: 
       style={anchorRect ? { maxHeight: Math.min(240, window.innerHeight - anchorRect.bottom - 20) } : undefined}
     >
       {loading ? (
-        <div className="ui-file-mention-loading">Scanning…</div>
+        <div className="ui-file-mention-loading">
+          <span className="ui-file-mention-spinner" />
+          Scanning…
+        </div>
       ) : items.length === 0 ? (
         <div className="ui-file-mention-empty">{query ? "No matching files" : "Type to search files…"}</div>
       ) : (
         items.map((item, i) => (
           <button
             key={item.path}
-            className={`ui-file-mention-option${i === activeIndex ? " active" : ""}`}
+            className={`ui-file-mention-option${i === activeIndex ? " active" : ""}${item.type === "directory" ? " is-dir" : ""}`}
             onMouseDown={(e) => {
               e.preventDefault();
               handleSelect(item);
             }}
             onMouseEnter={() => setActiveIndex(i)}
           >
-            <span className="ui-file-mention-icon">{item.type === "directory" ? "📁" : "📄"}</span>
+            <span className="ui-file-mention-icon">{item.type === "directory" ? <FolderIcon /> : <FileIcon />}</span>
             <span className="ui-file-mention-path">{item.path}</span>
+            <span className="ui-file-mention-type">
+              {item.type === "directory" ? "dir" : (item.path.split(".").pop() ?? "")}
+            </span>
           </button>
         ))
       )}

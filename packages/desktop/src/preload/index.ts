@@ -77,6 +77,7 @@ const api: DesktopApi = {
   gitStatus: () => ipcRenderer.invoke(IpcRequest.GitStatus),
   gitStage: (file) => ipcRenderer.invoke(IpcRequest.GitStage, file),
   gitUnstage: (file) => ipcRenderer.invoke(IpcRequest.GitUnstage, file),
+  gitDiscard: (file) => ipcRenderer.invoke(IpcRequest.GitDiscard, file),
   gitCommit: (message) => ipcRenderer.invoke(IpcRequest.GitCommit, message),
   gitCurrentBranch: () => ipcRenderer.invoke(IpcRequest.GitCurrentBranch),
   gitListBranches: () => ipcRenderer.invoke(IpcRequest.GitListBranches),
@@ -97,6 +98,9 @@ const api: DesktopApi = {
   // ── Agent changes ───────────────────────────────────────────────────────
   agentChangesList: (sessionId) => ipcRenderer.invoke(IpcRequest.AgentChangesList, sessionId),
   agentChangesDiff: (sessionId, file) => ipcRenderer.invoke(IpcRequest.AgentChangesDiff, sessionId, file),
+
+  // ── Session export ────────────────────────────────────────────────────────
+  exportSession: (sessionId) => ipcRenderer.invoke(IpcRequest.SessionExport, sessionId),
 };
 
 contextBridge.exposeInMainWorld("deepcode", api);

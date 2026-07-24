@@ -9,6 +9,7 @@ export const ko: Record<MessageKey, string> = {
   "common.close": "닫기",
   "common.apply": "적용",
   "common.remove": "제거",
+  "common.clear": "지우기",
   "common.show": "표시",
   "common.hide": "숨기기",
   "common.submit": "제출",
@@ -38,6 +39,7 @@ export const ko: Record<MessageKey, string> = {
   "sidebar.search": "세션 검색…",
   "sidebar.noResults": "일치하는 세션이 없습니다.",
   "sidebar.rename": "이름 바꾸기",
+  "sidebar.export": "내보내기",
   "sidebar.delete": "삭제",
 
   // ── Relative time ─────────────────────────────────────────
@@ -81,12 +83,17 @@ export const ko: Record<MessageKey, string> = {
   "welcome.skillsDesc": "플러그인을 탐색하고 작업에 스킬을 연결합니다.",
   "welcome.undoTitle": "실행 취소 및 복원",
   "welcome.undoDesc": "대화 또는 코드를 롤백합니다.",
+  "welcome.hintNew": "새 세션",
+  "welcome.hintPalette": "명령 팔레트",
+  "welcome.hintShortcuts": "모든 단축키",
 
   // ── Message rendering ─────────────────────────────────────
   "msg.noContent": "(내용 없음)",
   "msg.images": "이미지 {n}개",
   "msg.thinking": "사고",
   "msg.reasoning": "추론 중…",
+  "msg.copy": "복사",
+  "msg.copied": "복사됨!",
   "msg.plan": "계획",
   "msg.result": "결과",
   "msg.loadedSkill": "스킬 로드됨: {name}",
@@ -180,6 +187,7 @@ export const ko: Record<MessageKey, string> = {
   "builtin.karpathy-guidelines.desc":
     "Behavioral guidelines to reduce common LLM coding mistakes — avoid overcomplication, make surgical changes, surface assumptions, define verifiable success criteria.",
   "context.compaction": "컨텍스트",
+  "context.compacting": "압축 중…",
 
   // ── Model modal ───────────────────────────────────────────
   "model.thinking": "사고",
@@ -190,6 +198,7 @@ export const ko: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "요청에 실패했습니다.",
   "app.permissionDenied": "권한이 거부되었습니다. 아래에 답변을 추가한 후 Enter를 눌러 계속하세요.",
+  "app.taskComplete": "작업 완료",
 
   // ── Process output panel ─────────────────────────────────
   "process.title": "프로세스 출력",
@@ -198,6 +207,8 @@ export const ko: Record<MessageKey, string> = {
   "process.running": "실행 중",
   "process.timeoutSet": "타임아웃 설정",
   "process.noAdjustable": "조정 가능한 Bash 타임아웃이 없습니다",
+  "process.clear": "출력 지우기",
+  "process.cleared": "출력이 지워졌습니다",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "설정",
@@ -304,9 +315,34 @@ export const ko: Record<MessageKey, string> = {
   "command.plugins.label": "플러그인 센터",
   "command.settings.label": "설정",
   "command.undo.label": "실행 취소 / 복원",
+  "command.export.label": "세션을 Markdown으로 내보내기",
   "command.init.label": "AGENTS.md 생성",
   "command.raw.label": "추론 표시 전환",
   "command.tokens.label": "토큰 사용량",
+
+  // ── Keyboard shortcuts modal ────────────────────────────────
+  "shortcuts.title": "키보드 단축키",
+  "shortcuts.global": "글로벌",
+  "shortcuts.composerGroup": "컴포저",
+  "shortcuts.inputGroup": "입력",
+  "shortcuts.commandPalette": "명령 팔레트",
+  "shortcuts.newSession": "새 세션",
+  "shortcuts.processPanel": "프로세스 패널 전환",
+  "shortcuts.toggleSidebar": "사이드바 전환",
+  "shortcuts.togglePanel": "하단 패널 전환",
+  "shortcuts.settings": "설정 열기",
+  "shortcuts.shortcuts": "이 패널 표시",
+  "shortcuts.closeOverlay": "오버레이 닫기",
+  "shortcuts.send": "메시지 보내기",
+  "shortcuts.newline": "줄바꿈",
+  "shortcuts.togglePlan": "플랜 모드 전환",
+  "shortcuts.undo": "실행 취소",
+  "shortcuts.redo": "다시 실행",
+  "shortcuts.history": "프롬프트 기록",
+  "shortcuts.stopGeneration": "생성 중지",
+  "shortcuts.slashCommands": "슬래시 명령",
+  "shortcuts.fileMention": "파일 언급",
+  "shortcuts.pasteImage": "이미지 붙여넣기",
 
   // ── Token usage panel ─────────────────────────────────────
   "tokens.title": "토큰 사용량",
@@ -353,6 +389,9 @@ export const ko: Record<MessageKey, string> = {
   "scm.changes": "변경 사항",
   "scm.stage": "스테이징",
   "scm.unstage": "스테이징 해제",
+  "scm.stageAll": "모두 스테이징",
+  "scm.unstageAll": "모두 스테이징 해제",
+  "scm.discard": "변경 사항 취소",
   "scm.commit": "커밋",
   "scm.commitPlaceholder": "커밋 메시지…",
   "scm.refresh": "새로 고침",
@@ -365,6 +404,7 @@ export const ko: Record<MessageKey, string> = {
   "diff.noDiff": "표시할 차이가 없습니다.",
   "diff.selectFile": "차이를 볼 파일을 선택하세요.",
   "diff.binary": "바이너리 파일 — 차이를 표시하지 않습니다.",
+  "diff.loading": "차이 불러오는 중…",
   "diff.noAgentChanges": "이 세션에는 에이전트 파일 변경이 없습니다.",
 
   // ── deepStudio branding + new features ────────────────────

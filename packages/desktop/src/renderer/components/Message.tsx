@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import type { SessionMessage } from "../../shared/ipc";
 import type { ReasoningMode } from "../lib/appearance";
 import { renderMarkdown } from "../markdown";
@@ -12,9 +12,33 @@ import {
   getResultMd,
 } from "../lib/messages";
 import { useI18n } from "../i18n";
+import {
+  IconToolRead,
+  IconToolWrite,
+  IconToolEdit,
+  IconToolAsk,
+  IconToolPlan,
+  IconToolSearch,
+  IconToolMcp,
+  IconToolGeneric,
+} from "../ui/index";
 
 function Md({ text }: { text: string }): JSX.Element {
-  return <div className="ui-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
+  function handleClick(e: React.MouseEvent<HTMLDivElement>): void {
+    const btn = (e.target as HTMLElement).closest(".code-block-copy");
+    if (!btn) return;
+    const wrap = btn.closest(".code-block-wrap");
+    const code = wrap?.querySelector("code");
+    if (code) {
+      void navigator.clipboard.writeText(code.textContent ?? "").then(() => {
+        btn.textContent = "✓";
+        setTimeout(() => {
+          btn.textContent = "⧉";
+        }, 1500);
+      });
+    }
+  }
+  return <div className="ui-md" onClick={handleClick} dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
 }
 
 /**
@@ -46,21 +70,20 @@ function toolCls(name: string): string {
 }
 
 /**
- * Per-tool-type icon. SVG for the families that benefit from a sharp,
- * theme-tinted glyph (bash terminal, read/edit file), emoji for the rest
- * — keeps the bundle small and the distinction clear at a glance.
+ * Per-tool-type icon. SVG for all families — crisp, theme-tinted glyphs
+ * that inherit currentColor for automatic active/hover state changes.
  */
 function toolIcon(name: string): JSX.Element {
   const n = name.toLowerCase();
   if (n === "bash" || n === "cli") return <BashTerminalIcon />;
-  if (n === "read") return <span aria-hidden="true">📖</span>;
-  if (n === "write") return <span aria-hidden="true">📝</span>;
-  if (n === "edit") return <span aria-hidden="true">✏️</span>;
-  if (n === "askuserquestion") return <span aria-hidden="true">❓</span>;
-  if (n === "updateplan") return <span aria-hidden="true">📋</span>;
-  if (n === "websearch") return <span aria-hidden="true">🔍</span>;
-  if (n.startsWith("mcp__")) return <span aria-hidden="true">🔌</span>;
-  return <span aria-hidden="true">⚙</span>;
+  if (n === "read") return <IconToolRead />;
+  if (n === "write") return <IconToolWrite />;
+  if (n === "edit") return <IconToolEdit />;
+  if (n === "askuserquestion") return <IconToolAsk />;
+  if (n === "updateplan") return <IconToolPlan />;
+  if (n === "websearch") return <IconToolSearch />;
+  if (n.startsWith("mcp__")) return <IconToolMcp />;
+  return <IconToolGeneric />;
 }
 
 /** Inline-SVG terminal glyph: a window with a chevron prompt and a cursor. */
@@ -83,6 +106,24 @@ function BashTerminalIcon(): JSX.Element {
 
 function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max)}…`;
+}
+
+/** Compact character count: 1234 → "1.2k", 500 → "500". */
+function formatCharCount(n: number): string {
+  if (n < 1000) return String(n);
+  return `${(n / 1000).toFixed(1)}k`;
+}
+
+/** Format elapsed time between two ISO timestamps as a human-readable duration. */
+function formatElapsed(startIso: string, endIso: string): string {
+  const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
+  if (ms < 0 || Number.isNaN(ms)) return "";
+  if (ms < 1000) return `${ms}ms`;
+  const secs = ms / 1000;
+  if (secs < 60) return `${secs.toFixed(1)}s`;
+  const mins = Math.floor(secs / 60);
+  const remainSecs = Math.round(secs % 60);
+  return `${mins}m${remainSecs}s`;
 }
 
 /**
@@ -189,7 +230,8 @@ function UserBubble({ message }: { message: SessionMessage }): JSX.Element {
     <div className="ui-bubble-row user">
       <div className="ui-bubble user">
         <span style={{ whiteSpace: "pre-wrap" }}>{message.content || t("msg.noContent")}</span>
-        {attachments > 0 ? <span className="ui-bubble-attach">📎 {attachments}</span> : null}
+        {attachments > 0 ? <span className="ui-bubble-attach">{attachments} img</span> : null}
+        {message.createTime ? <span className="ui-msg-time user">{formatTime(message.createTime)}</span> : null}
       </div>
       <Avatar role="user" />
     </div>
@@ -210,6 +252,7 @@ function ThinkingBlock({
 }): JSX.Element | null {
   const { t } = useI18n();
   const summary = buildThinkingSummary(content, messageParams);
+  const charCount = content.length;
   // Reasoning is shown expanded by default — the user wants to see the
   // model's working, not just a one-line summary. reasoningMode === "hidden"
   // suppresses the block entirely; otherwise the block is visible and the
@@ -241,9 +284,10 @@ function ThinkingBlock({
       <Avatar role="thinking" />
       <div className="ui-bubble thinking">
         <button className="ui-thinking-toggle" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
-          <span className="ui-thinking-icon">{expanded ? "🧠" : "💭"}</span>
+          <span className="ui-thinking-icon">{expanded ? "◉" : "◎"}</span>
           <span className="ui-thinking-label">{t("msg.thinking")}</span>
           <span className="ui-thinking-summary">{truncate(summary || t("msg.reasoning"), 80)}</span>
+          {charCount > 0 ? <span className="ui-thinking-chars">{formatCharCount(charCount)}</span> : null}
           <span className="ui-thinking-chevron">{expanded ? "▾" : "▸"}</span>
         </button>
         {expanded && content ? (
@@ -257,12 +301,47 @@ function ThinkingBlock({
 }
 
 // ── Assistant bubble ──────────────────────────────────────────────────────────
+/** Format a timestamp as a short time string (HH:MM). */
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
 function AssistantBubble({ message }: { message: SessionMessage }): JSX.Element {
+  const { t } = useI18n();
   const content = (message.content || "").trim();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    if (!content) return;
+    void navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [content]);
+
   return (
     <div className="ui-bubble-row assistant">
       <Avatar role="assistant" />
-      <div className="ui-bubble assistant">{content ? <Md text={content} /> : null}</div>
+      <div className="ui-bubble assistant">
+        {content ? <Md text={content} /> : null}
+        {content ? (
+          <button
+            type="button"
+            className={`ui-msg-copy${copied ? " copied" : ""}`}
+            onClick={handleCopy}
+            title={copied ? t("msg.copied") : t("msg.copy")}
+            aria-label={t("msg.copy")}
+          >
+            {copied ? "✓" : "⧉"}
+          </button>
+        ) : null}
+        {message.createTime ? <span className="ui-msg-time">{formatTime(message.createTime)}</span> : null}
+      </div>
     </div>
   );
 }
@@ -293,6 +372,15 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
   const showHeaderHint = SHOW_RESULT_HINT_IN_HEADER.has(summary.name.toLowerCase());
   const [bodyOpen, setBodyOpen] = useState(!isFileTool);
   const [resultOpen, setResultOpen] = useState(false);
+  const [resultCopied, setResultCopied] = useState(false);
+
+  const handleCopyResult = useCallback(() => {
+    if (!resultMd) return;
+    void navigator.clipboard.writeText(resultMd).then(() => {
+      setResultCopied(true);
+      setTimeout(() => setResultCopied(false), 1500);
+    });
+  }, [resultMd]);
 
   // The header element is a button for collapsible tools (so the whole
   // card is clickable to expand/collapse) and a plain div for other
@@ -305,6 +393,10 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
          user can identify the operation without expanding the card. */}
       {isFileTool && params ? <span className="ui-tool-params-inline">{params}</span> : null}
       {summary.ok ? null : <span className="ui-tool-badge err">✗</span>}
+      {/* Elapsed time badge — how long the tool took to execute. */}
+      {message.createTime && message.updateTime && message.createTime !== message.updateTime ? (
+        <span className="ui-tool-elapsed">{formatElapsed(message.createTime, message.updateTime)}</span>
+      ) : null}
       {/* Bash cards show the result hint (exit code, first line) in the
          header — the user shouldn't have to expand to know whether the
          command succeeded. */}
@@ -345,7 +437,9 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
           {/* Plan lines for UpdatePlan */}
           {planLines.length > 0 ? (
             <div className="ui-tool-plan">
-              <div className="ui-tool-plan-label">📋 {t("msg.plan")}</div>
+              <div className="ui-tool-plan-label">
+                <IconToolPlan /> {t("msg.plan")}
+              </div>
               <div className="ui-tool-plan-body">{planLines.join("\n")}</div>
             </div>
           ) : null}
@@ -361,6 +455,14 @@ function ToolCard({ message }: { message: SessionMessage }): JSX.Element {
               </button>
               {resultOpen ? (
                 <div className="ui-tool-result">
+                  <button
+                    type="button"
+                    className={`ui-tool-result-copy${resultCopied ? " copied" : ""}`}
+                    onClick={handleCopyResult}
+                    title={resultCopied ? t("msg.copied") : t("msg.copy")}
+                  >
+                    {resultCopied ? "✓" : "⧉"}
+                  </button>
                   <ToolResult toolName={summary.name} params={params} resultMd={resultMd} />
                 </div>
               ) : null}
@@ -428,10 +530,10 @@ export function Message({
       return <SystemNote>{message.content || ""}</SystemNote>;
     }
     if (message.meta?.skill) {
-      return <SystemNote>⚡ {t("msg.loadedSkill", { name: message.meta.skill.name })}</SystemNote>;
+      return <SystemNote>› {t("msg.loadedSkill", { name: message.meta.skill.name })}</SystemNote>;
     }
     if (message.meta?.isSummary) {
-      return <SystemNote>📄 {t("msg.summaryInserted")}</SystemNote>;
+      return <SystemNote>› {t("msg.summaryInserted")}</SystemNote>;
     }
     return null;
   }

@@ -23,9 +23,23 @@ export function RailSpacer(): JSX.Element {
 
 type RailButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   active?: boolean;
+  /** Show a small attention dot (e.g. permission pending). */
+  badge?: boolean;
 };
 
 /** Single rail action; `active` highlights the current view. */
-export function RailButton({ active = false, className, type = "button", ...rest }: RailButtonProps): JSX.Element {
-  return <button type={type} className={cx("ui-rail-btn", active && "ui-rail-btn--active", className)} {...rest} />;
+export function RailButton({
+  active = false,
+  badge = false,
+  className,
+  type = "button",
+  ...rest
+}: RailButtonProps): JSX.Element {
+  return (
+    <button
+      type={type}
+      className={cx("ui-rail-btn", active && "ui-rail-btn--active", badge && "ui-rail-btn--badge", className)}
+      {...rest}
+    />
+  );
 }

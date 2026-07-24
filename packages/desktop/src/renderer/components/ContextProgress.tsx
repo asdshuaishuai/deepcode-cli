@@ -7,6 +7,8 @@ type Props = {
   activeTokens: number;
   /** Current model — decides the compaction threshold. */
   model: string;
+  /** Whether the session is currently compacting. */
+  compacting?: boolean;
 };
 
 /**
@@ -16,9 +18,9 @@ type Props = {
  * it nears the compaction threshold. Percentage keeps two decimals so the user
  * can watch it tick up smoothly rather than jumping in whole-point steps.
  */
-export function ContextProgress({ activeTokens, model }: Props): JSX.Element | null {
+export function ContextProgress({ activeTokens, model, compacting = false }: Props): JSX.Element | null {
   const { t } = useI18n();
-  if (activeTokens <= 0) return null;
+  if (activeTokens <= 0 && !compacting) return null;
 
   const threshold = compactTokenThreshold(model);
   // Two-decimal precision — the bar creeps up visibly instead of lurching in
@@ -32,11 +34,13 @@ export function ContextProgress({ activeTokens, model }: Props): JSX.Element | n
 
   return (
     <div
-      className={`ui-context-progress${critical ? " critical" : near ? " near" : ""}`}
+      className={`ui-context-progress${critical ? " critical" : near ? " near" : ""}${compacting ? " compacting" : ""}`}
       title={`${formatTokens(activeTokens)} / ${formatTokens(threshold)}`}
     >
       <div className="ui-context-progress-head">
-        <span className="ui-context-progress-label">{t("context.compaction")}</span>
+        <span className="ui-context-progress-label">
+          {compacting ? t("context.compacting") : t("context.compaction")}
+        </span>
         <span className="ui-context-progress-value">{pctRaw.toFixed(2)}%</span>
       </div>
       <div className="ui-context-progress-track">

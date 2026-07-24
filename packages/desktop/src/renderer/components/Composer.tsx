@@ -173,6 +173,15 @@ export function Composer(props: Props): JSX.Element {
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
 
+  // Auto-focus the textarea when the composer becomes enabled (e.g. session switch)
+  const prevDisabledRef = useRef(disabled);
+  useEffect(() => {
+    if (prevDisabledRef.current && !disabled) {
+      textareaRef.current?.focus();
+    }
+    prevDisabledRef.current = disabled;
+  }, [disabled]);
+
   const canSend = !busy && !disabled && (value.trim().length > 0 || selectedSkills.length > 0);
 
   const applySlash = useCallback(
@@ -442,7 +451,13 @@ export function Composer(props: Props): JSX.Element {
       ) : null}
 
       {/* Unified floating composer card: attachments → input → toolbar */}
-      <div className="ui-composer-card" onDragOver={handleDragOver} onDrop={handleDrop}>
+      <div
+        className={`ui-composer-card${planMode ? " plan-mode" : ""}${busy ? " busy" : ""}${canSend ? " ready" : ""}`}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {/* Plan mode badge */}
+        {planMode ? <span className="ui-composer-plan-badge">{t("composer.planMode") || "Plan"}</span> : null}
         {/* Attachments zone: images + selected skill chips */}
         {imageUrls.length > 0 || selectedSkills.length > 0 ? (
           <div className="ui-composer-attachments">
@@ -479,7 +494,7 @@ export function Composer(props: Props): JSX.Element {
         <textarea
           ref={textareaRef}
           className="ui-prompt"
-          rows={3}
+          rows={1}
           placeholder={
             disabled
               ? t("composer.respondAbove")
@@ -500,17 +515,15 @@ export function Composer(props: Props): JSX.Element {
         <div className="ui-composer-toolbar">
           <div className="ui-composer-toolbar-left">
             <Switch checked={planMode} onChange={onTogglePlan} label={t("composer.planMode")} />
-            <Switch
-              className="ui-switch-disabled"
-              checked={false}
-              disabled
-              readOnly
-              label={t("composer.targetMode")}
-              title={t("composer.targetModeHint")}
-            />
             {busy || errorText || statusText ? (
               <span className="ui-status-strip">
-                {busy ? <span className="ui-spinner" /> : null}
+                {busy ? (
+                  <span className="ui-thinking-dots">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                ) : null}
                 {errorText ? (
                   <span className="err-strip">{errorText}</span>
                 ) : statusText ? (
@@ -520,6 +533,9 @@ export function Composer(props: Props): JSX.Element {
             ) : null}
           </div>
           <div className="ui-composer-toolbar-right">
+            {value.length > 0 ? (
+              <span className={`ui-composer-charcount${value.length > 2000 ? " warn" : ""}`}>{value.length}</span>
+            ) : null}
             <span className="ui-composer-hint">
               {planMode ? t("composer.planHint") || "Type a plan request · Shift+Tab to toggle" : t("composer.hint")}
             </span>

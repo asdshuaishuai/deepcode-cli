@@ -30,7 +30,9 @@ import { IndexLibraryPanel } from "./components/IndexLibraryPanel";
 import { DiffOverlay, type DiffTarget } from "./components/DiffOverlay";
 import { UndoModal } from "./components/UndoModal";
 import { ProcessOutputPanel, accumulateStdout } from "./components/ProcessOutputPanel";
-import { aggregateUsage } from "./lib/token-usage";
+import { ShortcutsModal } from "./components/ShortcutsModal";
+import { ToastContainer, useToasts } from "./components/Toast";
+import { aggregateUsage, cacheHitRate } from "./lib/token-usage";
 import { buildToolSummary, getPlanLines } from "./lib/messages";
 import type { PermissionResult } from "./lib/permissions";
 import {
@@ -53,7 +55,29 @@ import {
   type Theme,
 } from "./lib/appearance";
 import { useI18n } from "./i18n";
-import { CommandPalette, Rail, RailButton, RailSpacer, type CommandItem } from "./ui/index";
+import {
+  CommandPalette,
+  Rail,
+  RailButton,
+  RailSpacer,
+  IconNewSession,
+  IconSessions,
+  IconGit,
+  IconTasks,
+  IconCommand,
+  IconPlugins,
+  IconTokens,
+  IconIndex,
+  IconReasoningHidden,
+  IconReasoningNormal,
+  IconReasoningExpanded,
+  IconMoon,
+  IconSun,
+  IconGlass,
+  IconUndo,
+  IconSettings,
+  type CommandItem,
+} from "./ui/index";
 
 type PendingPermissionReply = {
   sessionId: string;
@@ -90,6 +114,7 @@ function syntheticUserMessage(sessionId: string, content: string): SessionMessag
 
 export function App(): JSX.Element {
   const { t } = useI18n();
+  const { toasts, push: pushToast } = useToasts();
   const [projectRoot, setProjectRoot] = useState("");
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
   const [platform, setPlatform] = useState<string>("");
@@ -115,7 +140,7 @@ export function App(): JSX.Element {
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
   const [dismissedQuestionIds, setDismissedQuestionIds] = useState<Set<string>>(() => new Set());
 
-  const [modal, setModal] = useState<"undo" | null>(null);
+  const [modal, setModal] = useState<"undo" | "shortcuts" | null>(null);
   const [editable, setEditable] = useState<EditableSettings | null>(null);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string | undefined>(undefined);
 
@@ -134,6 +159,7 @@ export function App(): JSX.Element {
   const [reasoningMode, setReasoningModeState] = useState<ReasoningMode>(() => getStoredReasoningMode());
 
   const [panelOpen, setPanelOpen] = useState(true);
+  const [panelWidth, setPanelWidth] = useState(280);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [showProcessPanel, setShowProcessPanel] = useState(false);
   const [runningProcesses, setRunningProcesses] = useState<SerializableProcess[]>([]);
@@ -144,8 +170,46 @@ export function App(): JSX.Element {
   const projectRootRef = useRef<string>("");
   projectRootRef.current = projectRoot;
   const pendingSelectRef = useRef<string | null>(null);
+  const prevBusyRef = useRef(false);
 
   const bumpTree = useCallback(() => setTreeRefreshKey((k) => k + 1), []);
+
+  // ── Session completion notification ────────────────────────────────────────
+  useEffect(() => {
+    if (prevBusyRef.current && !busy && !errorLine) {
+      pushToast("success", t("app.taskComplete") || "Task completed");
+    }
+    prevBusyRef.current = busy;
+  }, [busy, errorLine, pushToast, t]);
+
+  // ── Panel resize handle ──────────────────────────────────────────────────────
+  const resizingRef = useRef(false);
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      resizingRef.current = true;
+      const startX = e.clientX;
+      const startWidth = panelWidth;
+      const onMove = (ev: MouseEvent) => {
+        if (!resizingRef.current) return;
+        const delta = ev.clientX - startX;
+        setPanelWidth(Math.max(200, Math.min(480, startWidth + delta)));
+      };
+      const onUp = () => {
+        resizingRef.current = false;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [panelWidth]
+  );
+
   // VSCode-style activity bar: selecting a rail view swaps the left panel while
   // the main area stays put. Re-selecting the active view toggles the panel.
   const selectView = useCallback((view: "explorer" | "scm" | "tasks" | "tokens" | "index" | "plugins") => {
@@ -273,6 +337,13 @@ export function App(): JSX.Element {
     }, 500);
 
     const offMcp = api.onMcpStatusChanged(() => void refreshMcp());
+    const offPlugin = api.onPluginEvent((event) => {
+      if (event.type === "mcp:server-error") {
+        pushToast("error", `MCP ${event.payload.name}: ${event.payload.error}`);
+      } else if (event.type === "plugin:error") {
+        pushToast("error", `${event.payload.source}: ${event.payload.error}`);
+      }
+    });
     const offRoot = api.onProjectRootChanged((root) => {
       setProjectRoot(root);
       void (async () => {
@@ -291,6 +362,7 @@ export function App(): JSX.Element {
       offProcessStdout();
       offStreamProgress();
       offMcp();
+      offPlugin();
       offRoot();
       clearInterval(tickTimer);
     };
@@ -588,7 +660,7 @@ export function App(): JSX.Element {
   );
   const handleOpenDiff = useCallback((target: DiffTarget) => setDiffTarget(target), []);
 
-  // ── ⌘K command palette + Ctrl+O process panel ────────────────────────────────
+  // ── ⌘K command palette + global keyboard shortcuts ─────────────────────────
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
@@ -599,15 +671,44 @@ export function App(): JSX.Element {
         e.preventDefault();
         setShowProcessPanel((v) => !v);
       }
+      // ⌘B / Ctrl+B — toggle sidebar panel
+      if ((e.metaKey || e.ctrlKey) && (e.key === "b" || e.key === "B")) {
+        e.preventDefault();
+        setPanelOpen((v) => !v);
+      }
+      // ⌘J / Ctrl+J — toggle bottom process panel
+      if ((e.metaKey || e.ctrlKey) && (e.key === "j" || e.key === "J")) {
+        e.preventDefault();
+        setShowProcessPanel((v) => !v);
+      }
+      // ⌘N / Ctrl+N — new session
+      if ((e.metaKey || e.ctrlKey) && (e.key === "n" || e.key === "N")) {
+        e.preventDefault();
+        handleNewSession();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        void handleOpenSettings();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "?" || e.key === "/")) {
+        e.preventDefault();
+        setModal((v) => (v === "shortcuts" ? null : "shortcuts"));
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [handleOpenSettings, handleNewSession]);
 
   const commandItems = useMemo<CommandItem[]>(
     () => [
-      { id: "new", label: t("command.new.label"), keywords: "new session", run: handleNewSession },
-      { id: "plan", label: t("command.plan.label"), keywords: "plan", run: () => setPlanMode((v) => !v) },
+      { id: "new", label: t("command.new.label"), keywords: "new session", shortcut: "⌘N", run: handleNewSession },
+      {
+        id: "plan",
+        label: t("command.plan.label"),
+        keywords: "plan",
+        shortcut: "⇧Tab",
+        run: () => setPlanMode((v) => !v),
+      },
       {
         id: "plugins",
         label: t("command.plugins.label"),
@@ -618,9 +719,31 @@ export function App(): JSX.Element {
         id: "settings",
         label: t("command.settings.label"),
         keywords: "settings config",
+        shortcut: "⌘,",
         run: () => void handleOpenSettings(),
       },
-      { id: "undo", label: t("command.undo.label"), keywords: "undo restore", run: () => setModal("undo") },
+      {
+        id: "undo",
+        label: t("command.undo.label"),
+        keywords: "undo restore",
+        shortcut: "⌘Z",
+        run: () => setModal("undo"),
+      },
+      {
+        id: "export",
+        label: t("command.export.label"),
+        keywords: "export markdown save session",
+        run: () => {
+          const id = activeIdRef.current;
+          if (id) {
+            void api.exportSession(id).then((res) => {
+              if (res.ok && res.path)
+                pushToast("success", `${t("command.export.label")}: ${res.path.split(/[\\/]/).pop()}`);
+              else if (!res.ok) pushToast("error", res.error ?? t("app.requestFailed"));
+            });
+          }
+        },
+      },
       {
         id: "tokens",
         label: t("command.tokens.label"),
@@ -634,6 +757,20 @@ export function App(): JSX.Element {
         run: () => void runPrompt({ text: "/init" }),
       },
       { id: "raw", label: t("command.raw.label"), keywords: "reasoning raw", run: handleCycleReasoning },
+      {
+        id: "sidebar",
+        label: t("shortcuts.toggleSidebar"),
+        keywords: "sidebar panel toggle",
+        shortcut: "⌘B",
+        run: () => setPanelOpen((v) => !v),
+      },
+      {
+        id: "shortcuts",
+        label: t("shortcuts.title"),
+        keywords: "keyboard help hotkeys",
+        shortcut: "⌘?",
+        run: () => setModal("shortcuts"),
+      },
     ],
     [handleCycleReasoning, handleNewSession, handleOpenSettings, openTokensView, runPrompt, selectView, t]
   );
@@ -685,6 +822,21 @@ export function App(): JSX.Element {
     }
   }, [runningProcesses, busy]);
 
+  // Reflect session state in the window title so the user can see progress
+  // even when the app is in the background (taskbar / dock tooltip).
+  useEffect(() => {
+    const base = "Deep Code";
+    if (busy) {
+      document.title = `⚡ ${base}`;
+    } else if (activeStatus === "ask_permission" || activeStatus === "waiting_for_user") {
+      document.title = `⚠️ ${base}`;
+    } else if (activeStatus === "error") {
+      document.title = `✖ ${base}`;
+    } else {
+      document.title = base;
+    }
+  }, [busy, activeStatus]);
+
   // Keep the conversation's bottom padding in sync with the floating
   // composer-dock's actual height so the last message can never sit
   // underneath the input. We measure the dock and write a CSS variable
@@ -727,8 +879,23 @@ export function App(): JSX.Element {
     const s = activeId ? sessions.find((x) => x.id === activeId) : null;
     return s ? s.activeTokens : 0;
   }, [activeId, sessions]);
+  const activeSessionTitle = useMemo(() => {
+    const s = activeId ? sessions.find((x) => x.id === activeId) : null;
+    return s?.summary ?? null;
+  }, [activeId, sessions]);
+  const activeSessionStatus = useMemo(() => {
+    const s = activeId ? sessions.find((x) => x.id === activeId) : null;
+    return s?.status ?? null;
+  }, [activeId, sessions]);
 
-  const reasoningIcon = reasoningMode === "hidden" ? "◌" : reasoningMode === "expanded" ? "◉" : "◎";
+  const reasoningIconEl =
+    reasoningMode === "hidden" ? (
+      <IconReasoningHidden />
+    ) : reasoningMode === "expanded" ? (
+      <IconReasoningExpanded />
+    ) : (
+      <IconReasoningNormal />
+    );
   const reasoningTitle =
     reasoningMode === "hidden"
       ? t("topbar.reasoningHidden")
@@ -739,18 +906,22 @@ export function App(): JSX.Element {
   const themeTitle = theme === "glass" ? t("topbar.themeGlass") : t("topbar.themeNative");
 
   return (
-    <div className={`ui-shell${panelOpen ? " panel-open" : ""}`}>
+    <div
+      className={`ui-shell${panelOpen ? " panel-open" : ""}`}
+      style={panelOpen ? { gridTemplateColumns: `52px ${panelWidth}px 1fr 0` } : undefined}
+    >
       <Rail>
-        <RailButton title={t("rail.newSession")} aria-label={t("rail.newSession")} onClick={handleNewSession}>
-          ✎
+        <RailButton title={`${t("rail.newSession")} (⌘N)`} aria-label={t("rail.newSession")} onClick={handleNewSession}>
+          <IconNewSession />
         </RailButton>
         <RailButton
           active={panelOpen && sidebarView === "explorer"}
-          title={t("rail.sessions")}
+          badge={activeStatus === "ask_permission" || activeStatus === "waiting_for_user"}
+          title={`${t("rail.sessions")} (⌘B)`}
           aria-label={t("rail.sessions")}
           onClick={() => selectView("explorer")}
         >
-          ☰
+          <IconSessions />
         </RailButton>
         <RailButton
           active={panelOpen && sidebarView === "scm"}
@@ -758,7 +929,7 @@ export function App(): JSX.Element {
           aria-label={t("rail.git")}
           onClick={() => selectView("scm")}
         >
-          ⑂
+          <IconGit />
         </RailButton>
         {hasPlan ? (
           <RailButton
@@ -767,11 +938,15 @@ export function App(): JSX.Element {
             aria-label={t("rail.tasks")}
             onClick={() => selectView("tasks")}
           >
-            ✓
+            <IconTasks />
           </RailButton>
         ) : null}
-        <RailButton title={t("rail.commands")} aria-label={t("rail.commands")} onClick={() => setPaletteOpen(true)}>
-          ⌘
+        <RailButton
+          title={`${t("rail.commands")} (⌘K)`}
+          aria-label={t("rail.commands")}
+          onClick={() => setPaletteOpen(true)}
+        >
+          <IconCommand />
         </RailButton>
         <RailButton
           active={panelOpen && sidebarView === "plugins"}
@@ -779,7 +954,7 @@ export function App(): JSX.Element {
           aria-label={t("rail.plugins")}
           onClick={() => selectView("plugins")}
         >
-          ⧉
+          <IconPlugins />
         </RailButton>
         <RailButton
           active={panelOpen && sidebarView === "tokens"}
@@ -787,7 +962,7 @@ export function App(): JSX.Element {
           aria-label={t("rail.tokens")}
           onClick={openTokensView}
         >
-          ▦
+          <IconTokens />
         </RailButton>
         <RailButton
           active={panelOpen && sidebarView === "index"}
@@ -795,75 +970,83 @@ export function App(): JSX.Element {
           aria-label={t("rail.index")}
           onClick={() => selectView("index")}
         >
-          ☷
+          <IconIndex />
         </RailButton>
         <RailSpacer />
         <RailButton title={reasoningTitle} aria-label={reasoningTitle} onClick={handleCycleReasoning}>
-          {reasoningIcon}
+          {reasoningIconEl}
         </RailButton>
         <RailButton title={appearanceTitle} aria-label={appearanceTitle} onClick={handleToggleAppearance}>
-          {appearance === "dark" ? "☾" : "☀"}
+          {appearance === "dark" ? <IconMoon /> : <IconSun />}
         </RailButton>
         {platform !== "win32" ? (
           <RailButton active={theme === "glass"} title={themeTitle} aria-label={themeTitle} onClick={handleToggleTheme}>
-            ❖
+            <IconGlass />
           </RailButton>
         ) : null}
         <RailButton title={t("rail.undo")} aria-label={t("rail.undo")} onClick={() => setModal("undo")}>
-          ↺
+          <IconUndo />
         </RailButton>
         <RailButton
           active={mainView === "settings"}
-          title={t("rail.settings")}
+          title={`${t("rail.settings")} (⌘,)`}
           aria-label={t("rail.settings")}
           onClick={() => void handleOpenSettings()}
         >
-          ⚙
+          <IconSettings />
         </RailButton>
       </Rail>
 
-      {sidebarView === "explorer" ? (
-        <Sidebar
-          activeId={activeId}
-          currentRoot={projectRoot}
-          refreshKey={treeRefreshKey}
-          sessions={sessions}
-          onSelectSession={(root, id) => void handleSelectSession(root, id)}
-          onDelete={(id) => void handleDeleteSession(id)}
-          onRename={(id, summary) => void handleRenameSession(id, summary)}
-          onArchive={(id) => void handleArchiveSession(id)}
-          onUnarchive={(id) => void handleUnarchiveSession(id)}
-          onCollapse={() => setPanelOpen(false)}
-          onNewWorkspace={() => void handleNewWorkspace()}
-          onNewSessionInWorkspace={(root) => void handleNewSessionInWorkspace(root)}
-          onOpenTokens={openTokensView}
-        />
-      ) : sidebarView === "scm" ? (
-        <SourceControlPanel refreshKey={treeRefreshKey} sessionId={activeId} onOpenDiff={handleOpenDiff} />
-      ) : sidebarView === "tasks" ? (
-        <TaskPanel messages={messages} />
-      ) : sidebarView === "tokens" ? (
-        <TokenStatsPanel sessions={sessions} />
-      ) : sidebarView === "index" ? (
-        <IndexLibraryPanel />
-      ) : (
-        <PluginMcpPanel
-          skills={skills}
-          selectedSkills={selectedSkills}
-          onToggleSkill={(name) =>
-            setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
-          }
-          onRefreshSkills={async () => {
-            await api.pluginRefreshSkills(activeId ?? undefined);
-            await refreshSkills(activeId ?? undefined);
-          }}
-          selected={selectedPlugin}
-          onSelect={(sel) => {
-            setSelectedPlugin(sel);
-            setMainView("plugins");
-          }}
-        />
-      )}
+      {/* Sidebar view transition wrapper — key change triggers fade animation */}
+      <div className="ui-session-panel-view" key={sidebarView}>
+        {sidebarView === "explorer" ? (
+          <Sidebar
+            activeId={activeId}
+            currentRoot={projectRoot}
+            refreshKey={treeRefreshKey}
+            sessions={sessions}
+            onSelectSession={(root, id) => void handleSelectSession(root, id)}
+            onDelete={(id) => void handleDeleteSession(id)}
+            onRename={(id, summary) => void handleRenameSession(id, summary)}
+            onArchive={(id) => void handleArchiveSession(id)}
+            onUnarchive={(id) => void handleUnarchiveSession(id)}
+            onCollapse={() => setPanelOpen(false)}
+            onNewWorkspace={() => void handleNewWorkspace()}
+            onNewSessionInWorkspace={(root) => void handleNewSessionInWorkspace(root)}
+            onOpenTokens={openTokensView}
+          />
+        ) : sidebarView === "scm" ? (
+          <SourceControlPanel refreshKey={treeRefreshKey} sessionId={activeId} onOpenDiff={handleOpenDiff} />
+        ) : sidebarView === "tasks" ? (
+          <TaskPanel messages={messages} />
+        ) : sidebarView === "tokens" ? (
+          <TokenStatsPanel sessions={sessions} />
+        ) : sidebarView === "index" ? (
+          <IndexLibraryPanel />
+        ) : (
+          <PluginMcpPanel
+            skills={skills}
+            selectedSkills={selectedSkills}
+            onToggleSkill={(name) =>
+              setSelectedSkills((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
+            }
+            onRefreshSkills={async () => {
+              await api.pluginRefreshSkills(activeId ?? undefined);
+              await refreshSkills(activeId ?? undefined);
+            }}
+            selected={selectedPlugin}
+            onSelect={(sel) => {
+              setSelectedPlugin(sel);
+              setMainView("plugins");
+            }}
+          />
+        )}
+      </div>
+
+      {/* Panel resize handle */}
+      {panelOpen ? (
+        <div className="ui-panel-resize" style={{ left: `${52 + panelWidth - 2}px` }} onMouseDown={handleResizeStart} />
+      ) : null}
 
       <TopBar
         platform={platform}
@@ -877,6 +1060,16 @@ export function App(): JSX.Element {
         onOpenTokens={openTokensView}
         activeTokens={activeContextTokens}
         totalTokens={workspaceUsage.totals.total}
+        cacheRate={cacheHitRate(workspaceUsage.totals)}
+        totalReqs={workspaceUsage.totals.reqs}
+        sessionTitle={activeSessionTitle}
+        sessionStatus={activeSessionStatus}
+        streaming={busy}
+        streamElapsedSecs={
+          busy && streamProgress
+            ? Math.max(0, Math.floor((Date.now() - Date.parse(streamProgress.startedAt)) / 1000))
+            : 0
+        }
       />
 
       <div className="ui-main">
@@ -907,6 +1100,7 @@ export function App(): JSX.Element {
               messages={messages}
               hasActiveSession={activeId !== null || messages.length > 0}
               reasoningMode={reasoningMode}
+              compacting={activeStatus === "compacting"}
               onQuickAction={(action) => {
                 if (action === "plan") {
                   setPlanMode((v) => !v);
@@ -973,7 +1167,11 @@ export function App(): JSX.Element {
                   }
                 }}
               />
-              <ContextProgress activeTokens={activeContextTokens} model={settings?.model ?? ""} />
+              <ContextProgress
+                activeTokens={activeContextTokens}
+                model={settings?.model ?? ""}
+                compacting={activeStatus === "compacting"}
+              />
             </div>
           </>
         )}
@@ -985,6 +1183,8 @@ export function App(): JSX.Element {
         <UndoModal sessionId={activeId} onClose={() => setModal(null)} onRestored={() => void handleUndoRestored()} />
       ) : null}
 
+      {modal === "shortcuts" ? <ShortcutsModal platform={platform} onClose={() => setModal(null)} /> : null}
+
       <CommandPalette
         open={paletteOpen}
         items={commandItems}
@@ -992,6 +1192,8 @@ export function App(): JSX.Element {
         emptyLabel={t("command.empty")}
         onClose={() => setPaletteOpen(false)}
       />
+
+      <ToastContainer toasts={toasts} />
     </div>
   );
 }

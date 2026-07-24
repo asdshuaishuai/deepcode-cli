@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import type { AskPermissionRequest, PermissionScope } from "../../shared/ipc";
 import {
   buildResult,
@@ -39,6 +39,22 @@ export function PermissionCard({ requests, onSubmit, onCancel }: Props): JSX.Ele
   }
 
   const prompt = prompts[effectiveIndex] ?? null;
+
+  const allowAlways = prompt ? isAlwaysAllowedScope(prompt.scope) : false;
+
+  // Keyboard shortcuts: 1=allow, 2=always (if available), 3=deny
+  useEffect(() => {
+    if (!prompt) return;
+    function onKey(e: KeyboardEvent): void {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "1") commit("allow");
+      else if (e.key === "2" && allowAlways) commit("always");
+      else if (e.key === "3" || (e.key === "2" && !allowAlways)) commit("deny");
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   if (!prompt) {
     return null;
   }
@@ -74,16 +90,25 @@ export function PermissionCard({ requests, onSubmit, onCancel }: Props): JSX.Ele
     }
   }
 
-  const allowAlways = isAlwaysAllowedScope(prompt.scope);
-
   return (
-    <Card warn>
+    <Card warn className="ui-card-enter">
       <CardHeader>
         {t("perm.required")}{" "}
         <span style={{ color: "var(--ui-text-faint)", fontWeight: 400 }}>
           {Math.min(effectiveIndex + 1, prompts.length)}/{prompts.length}
         </span>
       </CardHeader>
+      {/* Progress bar showing which permission step we're on */}
+      {prompts.length > 1 ? (
+        <div className="ui-perm-progress">
+          {prompts.map((_, i) => (
+            <div
+              key={i}
+              className={`ui-perm-progress-dot${i < effectiveIndex ? " done" : i === effectiveIndex ? " current" : ""}`}
+            />
+          ))}
+        </div>
+      ) : null}
       <div style={{ fontWeight: 600 }}>{prompt.request.name}</div>
       <div className="ui-mono">{prompt.request.command}</div>
       {prompt.request.description ? (
@@ -105,6 +130,22 @@ export function PermissionCard({ requests, onSubmit, onCancel }: Props): JSX.Ele
         <button className="ui-opt" onClick={() => commit("deny")}>
           {t("perm.no")}
         </button>
+      </div>
+      <div className="ui-perm-kbd-hint">
+        <span>
+          <kbd>1</kbd>
+          {t("perm.yes")}
+        </span>
+        {allowAlways ? (
+          <span>
+            <kbd>2</kbd>
+            {t("perm.always")}
+          </span>
+        ) : null}
+        <span>
+          <kbd>{allowAlways ? "3" : "2"}</kbd>
+          {t("perm.no")}
+        </span>
       </div>
       <Row justify="flex-end">
         <Button size="sm" onClick={onCancel}>

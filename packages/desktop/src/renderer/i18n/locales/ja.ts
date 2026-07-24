@@ -9,6 +9,7 @@ export const ja: Record<MessageKey, string> = {
   "common.close": "閉じる",
   "common.apply": "適用",
   "common.remove": "削除",
+  "common.clear": "クリア",
   "common.show": "表示",
   "common.hide": "非表示",
   "common.submit": "送信",
@@ -38,6 +39,7 @@ export const ja: Record<MessageKey, string> = {
   "sidebar.search": "セッションを検索…",
   "sidebar.noResults": "一致するセッションがありません。",
   "sidebar.rename": "名前を変更",
+  "sidebar.export": "エクスポート",
   "sidebar.delete": "削除",
 
   // ── Relative time ─────────────────────────────────────────
@@ -81,12 +83,17 @@ export const ja: Record<MessageKey, string> = {
   "welcome.skillsDesc": "プラグインを閲覧し、タスクにスキルを付加します。",
   "welcome.undoTitle": "元に戻す・復元",
   "welcome.undoDesc": "会話またはコードをロールバックします。",
+  "welcome.hintNew": "新規セッション",
+  "welcome.hintPalette": "コマンドパレット",
+  "welcome.hintShortcuts": "すべてのショートカット",
 
   // ── Message rendering ─────────────────────────────────────
   "msg.noContent": "（内容なし）",
   "msg.images": "{n} 枚の画像",
   "msg.thinking": "思考",
   "msg.reasoning": "推論中…",
+  "msg.copy": "コピー",
+  "msg.copied": "コピーしました！",
   "msg.plan": "計画",
   "msg.result": "結果",
   "msg.loadedSkill": "スキルを読み込みました：{name}",
@@ -180,6 +187,7 @@ export const ja: Record<MessageKey, string> = {
   "builtin.karpathy-guidelines.desc":
     "Behavioral guidelines to reduce common LLM coding mistakes — avoid overcomplication, make surgical changes, surface assumptions, define verifiable success criteria.",
   "context.compaction": "コンテキスト",
+  "context.compacting": "圧縮中…",
 
   // ── Model modal ───────────────────────────────────────────
   "model.thinking": "思考",
@@ -190,6 +198,7 @@ export const ja: Record<MessageKey, string> = {
   // ── App status / errors ───────────────────────────────────
   "app.requestFailed": "リクエストに失敗しました。",
   "app.permissionDenied": "許可が拒否されました。下に返信を追加し、Enter を押して続行してください。",
+  "app.taskComplete": "タスク完了",
 
   // ── Process output panel ─────────────────────────────────
   "process.title": "プロセス出力",
@@ -198,6 +207,8 @@ export const ja: Record<MessageKey, string> = {
   "process.running": "実行中",
   "process.timeoutSet": "タイムアウト設定",
   "process.noAdjustable": "調整可能な Bash タイムアウトがありません",
+  "process.clear": "出力をクリア",
+  "process.cleared": "出力をクリアしました",
 
   // ── Settings modal ────────────────────────────────────────
   "settings.title": "設定",
@@ -304,9 +315,34 @@ export const ja: Record<MessageKey, string> = {
   "command.plugins.label": "プラグインセンター",
   "command.settings.label": "設定",
   "command.undo.label": "元に戻す / 復元",
+  "command.export.label": "セッションを Markdown としてエクスポート",
   "command.init.label": "AGENTS.md を生成",
   "command.raw.label": "推論表示を切り替え",
   "command.tokens.label": "トークン使用量",
+
+  // ── Keyboard shortcuts modal ────────────────────────────────
+  "shortcuts.title": "キーボードショートカット",
+  "shortcuts.global": "グローバル",
+  "shortcuts.composerGroup": "コンポーザー",
+  "shortcuts.inputGroup": "入力",
+  "shortcuts.commandPalette": "コマンドパレット",
+  "shortcuts.newSession": "新規セッション",
+  "shortcuts.processPanel": "プロセスパネル切替",
+  "shortcuts.toggleSidebar": "サイドバー切替",
+  "shortcuts.togglePanel": "下部パネル切替",
+  "shortcuts.settings": "設定を開く",
+  "shortcuts.shortcuts": "このパネルを表示",
+  "shortcuts.closeOverlay": "オーバーレイを閉じる",
+  "shortcuts.send": "メッセージ送信",
+  "shortcuts.newline": "改行",
+  "shortcuts.togglePlan": "プランモード切替",
+  "shortcuts.undo": "元に戻す",
+  "shortcuts.redo": "やり直し",
+  "shortcuts.history": "プロンプト履歴",
+  "shortcuts.stopGeneration": "生成を停止",
+  "shortcuts.slashCommands": "スラッシュコマンド",
+  "shortcuts.fileMention": "ファイル参照",
+  "shortcuts.pasteImage": "画像を貼り付け",
 
   // ── Token usage panel ─────────────────────────────────────
   "tokens.title": "トークン使用量",
@@ -353,6 +389,9 @@ export const ja: Record<MessageKey, string> = {
   "scm.changes": "変更",
   "scm.stage": "ステージ",
   "scm.unstage": "ステージ解除",
+  "scm.stageAll": "すべてステージ",
+  "scm.unstageAll": "すべてステージ解除",
+  "scm.discard": "変更を破棄",
   "scm.commit": "コミット",
   "scm.commitPlaceholder": "コミットメッセージ…",
   "scm.refresh": "更新",
@@ -365,6 +404,7 @@ export const ja: Record<MessageKey, string> = {
   "diff.noDiff": "表示する差分がありません。",
   "diff.selectFile": "差分を表示するファイルを選択してください。",
   "diff.binary": "バイナリファイル — 差分は表示されません。",
+  "diff.loading": "差分を読み込み中…",
   "diff.noAgentChanges": "このセッションにはエージェントによるファイル変更がありません。",
 
   // ── deepStudio branding + new features ────────────────────

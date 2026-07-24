@@ -3,7 +3,7 @@ import type { ModelConfigSelection, ReasoningEffort, SettingsSummary } from "../
 import { api } from "../api";
 import { useI18n, type MessageKey } from "../i18n";
 import { Pill, Select } from "../ui/index";
-import { formatTokens } from "../lib/token-usage";
+import { formatTokens, compactTokenThreshold } from "../lib/token-usage";
 
 type Props = {
   platform: string;
@@ -13,11 +13,22 @@ type Props = {
   branches: string[];
   onSwitchBranch: (branch: string) => void;
   onSetModel: (selection: ModelConfigSelection) => void;
-  onOpenModel?: () => void;
   onOpenSettings: () => void;
   onOpenTokens: () => void;
   activeTokens: number;
   totalTokens: number;
+  /** Workspace-wide cache hit rate (0-100). */
+  cacheRate?: number;
+  /** Total API requests across workspace sessions. */
+  totalReqs?: number;
+  /** Active session summary/title for center display. */
+  sessionTitle?: string | null;
+  /** Active session status for the status dot indicator. */
+  sessionStatus?: string | null;
+  /** Whether the LLM is currently streaming a response. */
+  streaming?: boolean;
+  /** Elapsed seconds since streaming started (for live counter). */
+  streamElapsedSecs?: number;
 };
 
 const MODELS = ["deepseek-v4-pro", "deepseek-v4-flash"];
@@ -78,6 +89,12 @@ export function TopBar({
   onOpenTokens,
   activeTokens,
   totalTokens,
+  cacheRate,
+  totalReqs,
+  sessionTitle,
+  sessionStatus,
+  streaming = false,
+  streamElapsedSecs = 0,
 }: Props): JSX.Element {
   const { t } = useI18n();
   const isMac = platform === "darwin";
@@ -175,7 +192,21 @@ export function TopBar({
         ) : null}
       </div>
 
-      <div className="ui-window-bar-spacer" />
+      <div className="ui-window-bar-spacer">
+        {streaming ? (
+          <span className="ui-topbar-streaming" aria-label="streaming">
+            <span className="ui-topbar-streaming-dot" />
+            <span className="ui-topbar-streaming-dot" />
+            <span className="ui-topbar-streaming-dot" />
+            {streamElapsedSecs >= 3 ? <span className="ui-topbar-streaming-time">{streamElapsedSecs}s</span> : null}
+          </span>
+        ) : sessionTitle ? (
+          <span className="ui-topbar-session-status">
+            {sessionStatus ? <span className={`ui-status-dot ui-status-dot--${sessionStatus}`} /> : null}
+            <span className="ui-topbar-session-title">{sessionTitle}</span>
+          </span>
+        ) : null}
+      </div>
 
       {/* Dual model selectors: model + thinking model, paired inside one
          pill. The project ships against DeepSeek's official API only,
@@ -225,11 +256,24 @@ export function TopBar({
       ) : null}
 
       {/* Compact token mini-panel — also wrapped in the unified pill. */}
-      <button className="ui-topbar-pill ui-topbar-tokens" onClick={onOpenTokens} title={t("topbar.tokenPanelTitle")}>
+      <button
+        className="ui-topbar-pill ui-topbar-tokens"
+        onClick={onOpenTokens}
+        title={`${t("topbar.tokenPanelTitle")}${cacheRate != null && cacheRate > 0 ? ` · cache ${cacheRate}%` : ""}${totalReqs ? ` · ${totalReqs} reqs` : ""}`}
+      >
         <span className="ui-topbar-token-part">
           <span className="ui-topbar-token-label">{t("topbar.contextTokens")}</span>
           <span className="ui-topbar-token-value">{formatTokens(activeTokens)}</span>
         </span>
+        {/* Mini context usage bar — visual gauge of compaction proximity. */}
+        {activeTokens > 0 && settings ? (
+          <span className="ui-topbar-token-bar">
+            <span
+              className={`ui-topbar-token-bar-fill${activeTokens / compactTokenThreshold(settings.model) >= 0.8 ? " near" : ""}`}
+              style={{ width: `${Math.min(100, (activeTokens / compactTokenThreshold(settings.model)) * 100)}%` }}
+            />
+          </span>
+        ) : null}
         <span className="ui-topbar-token-part">
           <span className="ui-topbar-token-label">{t("topbar.workspaceTokens")}</span>
           <span className="ui-topbar-token-value">{formatTokens(totalTokens)}</span>
